@@ -25,6 +25,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.builders.*;
 import org.jetbrains.jps.incremental.CompileContext;
 import org.jetbrains.jps.incremental.TargetTypeRegistry;
+import org.jetbrains.jps.incremental.storage.Checksums;
 import org.jetbrains.jps.incremental.storage.Timestamps;
 import org.jetbrains.jps.model.JpsModel;
 
@@ -99,7 +100,12 @@ public class FSState {
     getDelta(rd.getTarget()).clearRecompile(rd);
   }
 
-  public boolean markDirty(@Nullable CompileContext context, final File file, final BuildRootDescriptor rd, final @Nullable Timestamps tsStorage, boolean saveEventStamp) throws IOException {
+  public boolean markDirty(@Nullable CompileContext context,
+                           final File file,
+                           final BuildRootDescriptor rd,
+                           final @Nullable Timestamps tsStorage,
+                           final @Nullable Checksums csStorage,
+                           boolean saveEventStamp) throws IOException {
     final boolean marked = getDelta(rd.getTarget()).markRecompile(rd, file);
     if (marked) {
       if (LOG.isDebugEnabled()) {
@@ -110,6 +116,9 @@ public class FSState {
       }
       if (tsStorage != null) {
         tsStorage.removeStamp(file, rd.getTarget());
+      }
+      if (csStorage != null) {
+        csStorage.removeChecksum(file, rd.getTarget());
       }
     }
     else {
@@ -135,10 +144,13 @@ public class FSState {
     return marked;
   }
 
-  public void registerDeleted(BuildTarget<?> target, final File file, @Nullable Timestamps tsStorage) throws IOException {
+  public void registerDeleted(BuildTarget<?> target, final File file, @Nullable Timestamps tsStorage, @Nullable Checksums csStorage) throws IOException {
     registerDeleted(target, file);
     if (tsStorage != null) {
       tsStorage.removeStamp(file, target);
+    }
+    if (csStorage != null) {
+      csStorage.removeChecksum(file, target);
     }
   }
 

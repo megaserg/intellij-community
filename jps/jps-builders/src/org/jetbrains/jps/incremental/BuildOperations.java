@@ -30,6 +30,7 @@ import org.jetbrains.jps.incremental.messages.DoneSomethingNotification;
 import org.jetbrains.jps.incremental.messages.FileDeletedEvent;
 import org.jetbrains.jps.incremental.storage.BuildDataManager;
 import org.jetbrains.jps.incremental.storage.BuildTargetConfiguration;
+import org.jetbrains.jps.incremental.storage.Checksums;
 import org.jetbrains.jps.incremental.storage.Timestamps;
 
 import java.io.File;
@@ -47,9 +48,10 @@ public class BuildOperations {
   public static void ensureFSStateInitialized(CompileContext context, BuildTarget<?> target) throws IOException {
     final ProjectDescriptor pd = context.getProjectDescriptor();
     final Timestamps timestamps = pd.timestamps.getStorage();
+    final Checksums checksums = pd.checksums.getStorage();
     final BuildTargetConfiguration configuration = pd.getTargetsState().getTargetConfiguration(target);
     if (context.isProjectRebuild()) {
-      FSOperations.markDirtyFiles(context, target, timestamps, true, null, null);
+      FSOperations.markDirtyFiles(context, target, timestamps, checksums, true, null, null);
       pd.fsState.markInitialScanPerformed(target);
       configuration.save(context);
     }
@@ -67,8 +69,9 @@ public class BuildOperations {
   private static void initTargetFSState(CompileContext context, BuildTarget<?> target, final boolean forceMarkDirty) throws IOException {
     final ProjectDescriptor pd = context.getProjectDescriptor();
     final Timestamps timestamps = pd.timestamps.getStorage();
+    final Checksums checksums = pd.checksums.getStorage();
     final THashSet<File> currentFiles = new THashSet<File>(FileUtil.FILE_HASHING_STRATEGY);
-    FSOperations.markDirtyFiles(context, target, timestamps, forceMarkDirty, currentFiles, null);
+    FSOperations.markDirtyFiles(context, target, timestamps, checksums, forceMarkDirty, currentFiles, null);
 
     // handle deleted paths
     final BuildFSState fsState = pd.fsState;
@@ -79,7 +82,7 @@ public class BuildOperations {
       // can check if the file exists
       final File file = new File(path);
       if (!currentFiles.contains(file)) {
-        fsState.registerDeleted(target, file, timestamps);
+        fsState.registerDeleted(target, file, timestamps, checksums);
       }
     }
     pd.fsState.markInitialScanPerformed(target);
@@ -116,8 +119,9 @@ public class BuildOperations {
           context.clearNonIncrementalMark((ModuleBuildTarget)target);
         }
         final Timestamps timestamps = pd.timestamps.getStorage();
+        final Checksums checksums = pd.checksums.getStorage();
         for (BuildRootDescriptor rd : pd.getBuildRootIndex().getTargetRoots(target, context)) {
-          marked |= fsState.markAllUpToDate(context, rd, timestamps);
+          marked |= fsState.markAllUpToDate(context, rd, timestamps, checksums);
         }
       }
 

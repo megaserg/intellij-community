@@ -15,6 +15,7 @@
  */
 package org.jetbrains.jps.incremental;
 
+import com.intellij.openapi.ui.NullableComponent;
 import com.intellij.openapi.util.io.FileSystemUtil;
 import com.intellij.openapi.util.io.FileUtil;
 import gnu.trove.THashSet;
@@ -29,6 +30,7 @@ import org.jetbrains.jps.builders.impl.BuildTargetChunk;
 import org.jetbrains.jps.builders.java.JavaBuilderUtil;
 import org.jetbrains.jps.builders.java.JavaSourceRootDescriptor;
 import org.jetbrains.jps.cmdline.ProjectDescriptor;
+import org.jetbrains.jps.incremental.storage.Checksums;
 import org.jetbrains.jps.incremental.storage.Timestamps;
 import org.jetbrains.jps.model.java.JpsJavaClasspathKind;
 import org.jetbrains.jps.model.java.JpsJavaExtensionService;
@@ -70,7 +72,7 @@ public class FSOperations {
     final JavaSourceRootDescriptor rd = context.getProjectDescriptor().getBuildRootIndex().findJavaRootDescriptor(context, file);
     if (rd != null) {
       final ProjectDescriptor pd = context.getProjectDescriptor();
-      pd.fsState.markDirty(context, file, rd, pd.timestamps.getStorage(), false);
+      pd.fsState.markDirty(context, file, rd, pd.timestamps.getStorage(), pd.checksums.getStorage(), false);
     }
   }
 
@@ -86,14 +88,14 @@ public class FSOperations {
     final JavaSourceRootDescriptor rd = context.getProjectDescriptor().getBuildRootIndex().findJavaRootDescriptor(context, file);
     if (rd != null) {
       final ProjectDescriptor pd = context.getProjectDescriptor();
-      pd.fsState.registerDeleted(rd.target, file, pd.timestamps.getStorage());
+      pd.fsState.registerDeleted(rd.target, file, pd.timestamps.getStorage(), pd.checksums.getStorage());
     }
   }
 
   public static void markDirty(CompileContext context, final ModuleChunk chunk, @Nullable FileFilter filter) throws IOException {
     final ProjectDescriptor pd = context.getProjectDescriptor();
     for (ModuleBuildTarget target : chunk.getTargets()) {
-      markDirtyFiles(context, target, pd.timestamps.getStorage(), true, null, filter);
+      markDirtyFiles(context, target, pd.timestamps.getStorage(), pd.checksums.getStorage(), true, null, filter);
     }
   }
 
@@ -129,8 +131,9 @@ public class FSOperations {
     }
 
     final Timestamps timestamps = context.getProjectDescriptor().timestamps.getStorage();
+    final Checksums checksums = context.getProjectDescriptor().checksums.getStorage();
     for (ModuleBuildTarget target : dirtyTargets) {
-      markDirtyFiles(context, target, timestamps, true, null, null);
+      markDirtyFiles(context, target, timestamps, checksums, true, null, null);
     }
 
     if (JavaBuilderUtil.isCompileJavaIncrementally(context)) {
@@ -158,6 +161,7 @@ public class FSOperations {
   static void markDirtyFiles(CompileContext context,
                              BuildTarget<?> target,
                              Timestamps timestamps,
+                             Checksums checksums,
                              boolean forceMarkDirty,
                              @Nullable THashSet<File> currentFiles,
                              @Nullable FileFilter filter) throws IOException {
@@ -171,7 +175,7 @@ public class FSOperations {
         context.getProjectDescriptor().fsState.clearRecompile(rd);
       }
       final FSCache fsCache = rd.canUseFileCache() ? context.getProjectDescriptor().getFSCache() : FSCache.NO_CACHE;
-      traverseRecursively(context, rd, rd.getRootFile(), timestamps, forceMarkDirty, currentFiles, filter, fsCache);
+      traverseRecursively(context, rd, rd.getRootFile(), timestamps, checksums, forceMarkDirty, currentFiles, filter, fsCache);
     }
   }
 
@@ -179,14 +183,17 @@ public class FSOperations {
                                           final BuildRootDescriptor rd,
                                           final File file,
                                           @NotNull final Timestamps tsStorage,
+                                          @NotNull final Checksums csStorage,
                                           final boolean forceDirty,
-                                          @Nullable Set<File> currentFiles, @Nullable FileFilter filter, @NotNull FSCache fsCache) throws IOException {
+                                          @Nullable Set<File> currentFiles,
+                                          @Nullable FileFilter filter,
+                                          @NotNull FSCache fsCache) throws IOException {
     BuildRootIndex rootIndex = context.getProjectDescriptor().getBuildRootIndex();
     final File[] children = fsCache.getChildren(file);
     if (children != null) { // is directory
       if (children.length > 0 && rootIndex.isDirectoryAccepted(file, rd)) {
         for (File child : children) {
-          traverseRecursively(context, rd, child, tsStorage, forceDirty, currentFiles, filter, fsCache);
+          traverseRecursively(context, rd, child, tsStorage, csStorage, forceDirty, currentFiles, filter, fsCache);
         }
       }
     }
@@ -199,8 +206,9 @@ public class FSOperations {
         if (markDirty) {
           // if it is full project rebuild, all storages are already completely cleared;
           // so passing null because there is no need to access the storage to clear non-existing data
-          final Timestamps marker = context.isProjectRebuild() ? null : tsStorage;
-          context.getProjectDescriptor().fsState.markDirty(context, file, rd, marker, false);
+          final Timestamps tsMarker = context.isProjectRebuild() ? null : tsStorage;
+          final Checksums csMarker = context.isProjectRebuild() ? null : csStorage;
+          context.getProjectDescriptor().fsState.markDirty(context, file, rd, tsMarker, csMarker, false);
         }
         if (currentFiles != null) {
           currentFiles.add(file);

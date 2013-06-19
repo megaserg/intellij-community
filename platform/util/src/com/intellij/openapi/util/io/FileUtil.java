@@ -35,6 +35,8 @@ import org.jetbrains.annotations.TestOnly;
 
 import java.io.*;
 import java.lang.reflect.Method;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.regex.Pattern;
@@ -1390,5 +1392,25 @@ public class FileUtil extends FileUtilRt {
     }
     final String name = file.getName();
     return StringUtil.endsWithIgnoreCase(name, ".jar") || StringUtil.endsWithIgnoreCase(name, ".zip");
+  }
+
+  public static byte[] computeChecksum(File file) throws IOException {
+    InputStream fis = new FileInputStream(file);
+
+    try {
+      MessageDigest md5 = MessageDigest.getInstance("MD5");
+      byte[] buffer = new byte[1024];
+      int read;
+      while ((read = fis.read(buffer)) > 0) {
+        md5.update(buffer, 0, read);
+      }
+      return md5.digest();
+    }
+    catch (NoSuchAlgorithmException e) {
+      return new byte[0];
+    }
+    finally {
+      fis.close();
+    }
   }
 }

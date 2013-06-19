@@ -38,6 +38,7 @@ import org.jetbrains.jps.incremental.Utils;
 import org.jetbrains.jps.incremental.fs.BuildFSState;
 import org.jetbrains.jps.incremental.fs.FSState;
 import org.jetbrains.jps.incremental.messages.*;
+import org.jetbrains.jps.incremental.storage.Checksums;
 import org.jetbrains.jps.incremental.storage.Timestamps;
 import org.jetbrains.jps.model.module.JpsModule;
 import org.jetbrains.jps.service.SharedThreadPool;
@@ -314,6 +315,7 @@ final class BuildSession implements Runnable, CanceledStatus {
     }
 
     final Timestamps timestamps = pd.timestamps.getStorage();
+    final Checksums checksums = pd.checksums.getStorage();
     boolean cacheCleared = false;
     for (String deleted : event.getDeletedPathsList()) {
       final File file = new File(deleted);
@@ -327,7 +329,7 @@ final class BuildSession implements Runnable, CanceledStatus {
           LOG.debug("Applying deleted path from fs event: " + file.getPath());
         }
         for (BuildRootDescriptor rootDescriptor : descriptor) {
-          pd.fsState.registerDeleted(rootDescriptor.getTarget(), file, timestamps);
+          pd.fsState.registerDeleted(rootDescriptor.getTarget(), file, timestamps, checksums);
         }
       }
       else {
@@ -355,7 +357,7 @@ final class BuildSession implements Runnable, CanceledStatus {
                 pd.getFSCache().clear();
                 cacheCleared = true;
               }
-              pd.fsState.markDirty(null, file, descriptor, timestamps, saveEventStamp);
+              pd.fsState.markDirty(null, file, descriptor, timestamps, checksums, saveEventStamp);
             }
             else {
               if (LOG.isDebugEnabled()) {

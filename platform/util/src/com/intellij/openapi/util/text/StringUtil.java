@@ -2448,6 +2448,18 @@ public class StringUtil extends StringUtilRt {
     return false;
   }
 
+  public static String toHexString(byte[] bytes)
+  {
+    final String hexChar = "0123456789abcdef";
+
+    StringBuilder sb = new StringBuilder();
+    for (byte b : bytes) {
+      sb.append(hexChar.charAt((b >> 4) & 0x0f));
+      sb.append(hexChar.charAt(b & 0x0f));
+    }
+    return sb.toString();
+  }
+
   private static boolean trimStart(@NotNull StringBuilder buffer, @NotNull CharSequence start) {
     if (startsWith(buffer, start)) {
       buffer.delete(0, start.length());

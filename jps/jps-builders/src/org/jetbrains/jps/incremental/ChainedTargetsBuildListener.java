@@ -20,6 +20,8 @@ import com.intellij.openapi.util.io.FileUtil;
 import org.jetbrains.jps.builders.BuildRootDescriptor;
 import org.jetbrains.jps.builders.BuildRootIndex;
 import org.jetbrains.jps.incremental.fs.BuildFSState;
+import org.jetbrains.jps.incremental.storage.Checksums;
+import org.jetbrains.jps.incremental.storage.Timestamps;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,7 +49,9 @@ class ChainedTargetsBuildListener implements BuildListener {
       Collection<BuildRootDescriptor> descriptors = rootsIndex.findAllParentDescriptors(file, null, myContext);
       for (BuildRootDescriptor descriptor : descriptors) {
         try {
-          fsState.markDirty(myContext, file, descriptor, myContext.getProjectDescriptor().timestamps.getStorage(), false);
+          final Timestamps timestamps = myContext.getProjectDescriptor().timestamps.getStorage();
+          final Checksums checksums = myContext.getProjectDescriptor().checksums.getStorage();
+          fsState.markDirty(myContext, file, descriptor, timestamps, checksums, false);
         }
         catch (IOException ignored) {
         }

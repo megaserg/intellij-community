@@ -34,10 +34,7 @@ import org.jetbrains.jps.incremental.*;
 import org.jetbrains.jps.incremental.fs.BuildFSState;
 import org.jetbrains.jps.incremental.messages.BuildMessage;
 import org.jetbrains.jps.incremental.messages.CompilerMessage;
-import org.jetbrains.jps.incremental.storage.BuildDataManager;
-import org.jetbrains.jps.incremental.storage.BuildTargetsState;
-import org.jetbrains.jps.incremental.storage.ProjectTimestamps;
-import org.jetbrains.jps.incremental.storage.Timestamps;
+import org.jetbrains.jps.incremental.storage.*;
 import org.jetbrains.jps.indices.ModuleExcludeIndex;
 import org.jetbrains.jps.indices.impl.IgnoredFileIndexImpl;
 import org.jetbrains.jps.indices.impl.ModuleExcludeIndexImpl;
@@ -77,9 +74,11 @@ public class BuildRunner {
     BuildTargetsState targetsState = new BuildTargetsState(dataPaths, jpsModel, buildRootIndex);
 
     ProjectTimestamps projectTimestamps = null;
+    ProjectChecksums projectChecksums = null;
     BuildDataManager dataManager = null;
     try {
       projectTimestamps = new ProjectTimestamps(dataStorageRoot, targetsState);
+      projectChecksums = new ProjectChecksums(dataStorageRoot, targetsState);
       dataManager = new BuildDataManager(dataPaths, targetsState, STORE_TEMP_CACHES_IN_MEMORY);
       if (dataManager.versionDiffers()) {
         myForceCleanCaches = true;
@@ -92,6 +91,9 @@ public class BuildRunner {
       if (projectTimestamps != null) {
         projectTimestamps.close();
       }
+      if (projectChecksums != null) {
+        projectChecksums.close();
+      }
       if (dataManager != null) {
         dataManager.close();
       }
@@ -99,13 +101,14 @@ public class BuildRunner {
       FileUtil.delete(dataStorageRoot);
       targetsState = new BuildTargetsState(dataPaths, jpsModel, buildRootIndex);
       projectTimestamps = new ProjectTimestamps(dataStorageRoot, targetsState);
+      projectChecksums = new ProjectChecksums(dataStorageRoot, targetsState);
       dataManager = new BuildDataManager(dataPaths, targetsState, STORE_TEMP_CACHES_IN_MEMORY);
       // second attempt succeeded
       msgHandler.processMessage(new CompilerMessage("build", BuildMessage.Kind.INFO, "Project rebuild forced: " + e.getMessage()));
     }
 
-    return new ProjectDescriptor(jpsModel, fsState, projectTimestamps, dataManager, BuildLoggingManager.DEFAULT, index, targetsState,
-                                 targetIndex, buildRootIndex, ignoredFileIndex);
+    return new ProjectDescriptor(jpsModel, fsState, projectTimestamps, projectChecksums, dataManager, BuildLoggingManager.DEFAULT, index,
+                                 targetsState, targetIndex, buildRootIndex, ignoredFileIndex);
   }
 
   public void setForceCleanCaches(boolean forceCleanCaches) {
@@ -189,6 +192,7 @@ public class BuildRunner {
     }
 
     final Timestamps timestamps = pd.timestamps.getStorage();
+    final Checksums checksums = pd.checksums.getStorage();
     if (!paths.isEmpty()) {
       files = new HashMap<BuildTarget<?>, Set<File>>();
       for (String path : paths) {
@@ -202,7 +206,7 @@ public class BuildRunner {
           }
           fileSet.add(file);
           if (targetTypesToForceBuild.contains(descriptor.getTarget().getTargetType())) {
-            pd.fsState.markDirty(null, file, descriptor, timestamps, false);
+            pd.fsState.markDirty(null, file, descriptor, timestamps, checksums, false);
           }
         }
       }

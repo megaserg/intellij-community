@@ -18,6 +18,8 @@ package org.jetbrains.jps.incremental.fs;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.io.FileSystemUtil;
+import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.util.text.StringUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.ModuleChunk;
@@ -29,10 +31,12 @@ import org.jetbrains.jps.incremental.CompileContext;
 import org.jetbrains.jps.incremental.CompileScope;
 import org.jetbrains.jps.incremental.ModuleBuildTarget;
 import org.jetbrains.jps.incremental.Utils;
+import org.jetbrains.jps.incremental.storage.Checksums;
 import org.jetbrains.jps.incremental.storage.Timestamps;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -91,12 +95,17 @@ public class BuildFSState extends FSState {
    * @throws IOException
    */
   @Override
-  public boolean markDirty(@Nullable CompileContext context, File file, final BuildRootDescriptor rd, @Nullable Timestamps tsStorage, boolean saveEventStamp) throws IOException {
+  public boolean markDirty(@Nullable CompileContext context,
+                           File file,
+                           final BuildRootDescriptor rd,
+                           @Nullable Timestamps tsStorage,
+                           @Nullable Checksums csStorage,
+                           boolean saveEventStamp) throws IOException {
     final FilesDelta roundDelta = getRoundDelta(CURRENT_ROUND_DELTA_KEY, context);
     if (roundDelta != null && isInCurrentContextTargets(context, rd)) {
       roundDelta.markRecompile(rd, file);
     }
-    return super.markDirty(context, file, rd, tsStorage, saveEventStamp);
+    return super.markDirty(context, file, rd, tsStorage, csStorage, saveEventStamp);
   }
 
   private static boolean isInCurrentContextTargets(CompileContext context, BuildRootDescriptor rd) {
@@ -168,7 +177,7 @@ public class BuildFSState extends FSState {
   /**
    * @return true if marked something, false otherwise
    */
-  public boolean markAllUpToDate(CompileContext context, final BuildRootDescriptor rd, final Timestamps stamps) throws IOException {
+  public boolean markAllUpToDate(CompileContext context, final BuildRootDescriptor rd, final Timestamps stamps, final Checksums checksums) throws IOException {
     boolean marked = false;
     final FilesDelta delta = getDelta(rd.getTarget());
     final Set<File> files = delta.clearRecompile(rd);
@@ -178,6 +187,7 @@ public class BuildFSState extends FSState {
       for (File file : files) {
         if (scope.isAffected(rd.getTarget(), file)) {
           final long currentFileStamp = FileSystemUtil.lastModified(file);
+          final String currentFileChecksum = StringUtil.toHexString(FileUtil.computeChecksum(file));
           if (!rd.isGenerated() && (currentFileStamp > compilationStartStamp || getEventRegistrationStamp(file) > compilationStartStamp)) {
             // if the file was modified after the compilation had started,
             // do not save the stamp considering file dirty
@@ -189,6 +199,7 @@ public class BuildFSState extends FSState {
           else {
             marked = true;
             stamps.saveStamp(file, rd.getTarget(), currentFileStamp);
+            checksums.saveChecksum(file, rd.getTarget(), currentFileChecksum);
           }
         }
         else {

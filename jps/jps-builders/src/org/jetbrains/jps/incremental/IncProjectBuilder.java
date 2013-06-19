@@ -172,6 +172,7 @@ public class IncProjectBuilder {
       public void run() {
         myProjectDescriptor.dataManager.flush(false);
         myProjectDescriptor.timestamps.getStorage().force();
+        myProjectDescriptor.checksums.getStorage().force();
       }
     });
     
@@ -295,6 +296,7 @@ public class IncProjectBuilder {
     if (context != null) {
       final ProjectDescriptor pd = context.getProjectDescriptor();
       pd.timestamps.getStorage().force();
+      pd.checksums.getStorage().force();
       pd.dataManager.flush(false);
     }
     final ExternalJavacDescriptor descriptor = ExternalJavacDescriptor.KEY.get(context);
@@ -422,6 +424,7 @@ public class IncProjectBuilder {
 
     try {
       projectDescriptor.timestamps.getStorage().clean();
+      projectDescriptor.checksums.getStorage().clean();
     }
     catch (IOException e) {
       throw new ProjectBuildException("Error cleaning timestamps storage", e);
@@ -858,7 +861,7 @@ public class IncProjectBuilder {
             final Collection<String> paths = entry.getValue();
             if (paths != null) {
               for (String path : paths) {
-                myProjectDescriptor.fsState.registerDeleted(target, new File(path), null);
+                myProjectDescriptor.fsState.registerDeleted(target, new File(path), null, null);
               }
             }
           }

@@ -24,6 +24,7 @@ import org.jetbrains.jps.incremental.FSCache;
 import org.jetbrains.jps.incremental.fs.BuildFSState;
 import org.jetbrains.jps.incremental.storage.BuildDataManager;
 import org.jetbrains.jps.incremental.storage.BuildTargetsState;
+import org.jetbrains.jps.incremental.storage.ProjectChecksums;
 import org.jetbrains.jps.incremental.storage.ProjectTimestamps;
 import org.jetbrains.jps.indices.IgnoredFileIndex;
 import org.jetbrains.jps.indices.ModuleExcludeIndex;
@@ -46,6 +47,7 @@ public final class ProjectDescriptor {
   private final JpsModel myModel;
   public final BuildFSState fsState;
   public final ProjectTimestamps timestamps;
+  public final ProjectChecksums checksums;
   public final BuildDataManager dataManager;
   private final BuildLoggingManager myLoggingManager;
   private final BuildTargetsState myTargetsState;
@@ -61,6 +63,7 @@ public final class ProjectDescriptor {
   public ProjectDescriptor(JpsModel model,
                            BuildFSState fsState,
                            ProjectTimestamps timestamps,
+                           ProjectChecksums checksums,
                            BuildDataManager dataManager,
                            BuildLoggingManager loggingManager,
                            final ModuleExcludeIndex moduleExcludeIndex,
@@ -71,6 +74,7 @@ public final class ProjectDescriptor {
     myProject = model.getProject();
     this.fsState = fsState;
     this.timestamps = timestamps;
+    this.checksums = checksums;
     this.dataManager = dataManager;
     myBuildTargetIndex = buildTargetIndex;
     myBuildRootIndex = buildRootIndex;
@@ -137,6 +141,7 @@ public final class ProjectDescriptor {
     if (shouldClose) {
       try {
         timestamps.close();
+        checksums.close();
       }
       finally {
         try {
