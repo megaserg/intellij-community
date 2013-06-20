@@ -117,8 +117,12 @@ public class BuildFSState extends FSState {
   }
 
   @Override
-  public boolean markDirtyIfNotDeleted(@Nullable CompileContext context, File file, final BuildRootDescriptor rd, @Nullable Timestamps tsStorage) throws IOException {
-    final boolean marked = super.markDirtyIfNotDeleted(context, file, rd, tsStorage);
+  public boolean markDirtyIfNotDeleted(@Nullable CompileContext context,
+                                       File file,
+                                       final BuildRootDescriptor rd,
+                                       @Nullable Timestamps tsStorage,
+                                       @Nullable Checksums csStorage) throws IOException {
+    final boolean marked = super.markDirtyIfNotDeleted(context, file, rd, tsStorage, csStorage);
     if (marked) {
       final FilesDelta roundDelta = getRoundDelta(CURRENT_ROUND_DELTA_KEY, context);
       if (roundDelta != null) {
@@ -187,8 +191,12 @@ public class BuildFSState extends FSState {
       for (File file : files) {
         if (scope.isAffected(rd.getTarget(), file)) {
           final long currentFileStamp = FileSystemUtil.lastModified(file);
-          final String currentFileChecksum = StringUtil.toHexString(FileUtil.computeChecksum(file));
+          final String currentFileChecksum = FileUtil.computeChecksum(file);
+          // Changed by serebryakov.
+          /*
           if (!rd.isGenerated() && (currentFileStamp > compilationStartStamp || getEventRegistrationStamp(file) > compilationStartStamp)) {
+           */
+          if (false) {
             // if the file was modified after the compilation had started,
             // do not save the stamp considering file dirty
             if (Utils.IS_TEST_MODE) {
@@ -198,7 +206,10 @@ public class BuildFSState extends FSState {
           }
           else {
             marked = true;
+            // Changed by serebryakov.
+            /*
             stamps.saveStamp(file, rd.getTarget(), currentFileStamp);
+             */
             checksums.saveChecksum(file, rd.getTarget(), currentFileChecksum);
           }
         }

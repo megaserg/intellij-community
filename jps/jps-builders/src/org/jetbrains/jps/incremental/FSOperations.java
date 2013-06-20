@@ -18,6 +18,7 @@ package org.jetbrains.jps.incremental;
 import com.intellij.openapi.ui.NullableComponent;
 import com.intellij.openapi.util.io.FileSystemUtil;
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.util.text.StringUtil;
 import gnu.trove.THashSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -80,7 +81,7 @@ public class FSOperations {
     final JavaSourceRootDescriptor rd = context.getProjectDescriptor().getBuildRootIndex().findJavaRootDescriptor(context, file);
     if (rd != null) {
       final ProjectDescriptor pd = context.getProjectDescriptor();
-      pd.fsState.markDirtyIfNotDeleted(context, file, rd, pd.timestamps.getStorage());
+      pd.fsState.markDirtyIfNotDeleted(context, file, rd, pd.timestamps.getStorage(), pd.checksums.getStorage());
     }
   }
 
@@ -201,7 +202,9 @@ public class FSOperations {
       if (rootIndex.isFileAccepted(file, rd) && (filter == null || filter.accept(file))) {
         boolean markDirty = forceDirty;
         if (!markDirty) {
-          markDirty = tsStorage.getStamp(file, rd.getTarget()) != FileSystemUtil.lastModified(file);
+          // Changed by serebryakov.
+          //markDirty = tsStorage.getStamp(file, rd.getTarget()) != FileSystemUtil.lastModified(file);
+          markDirty = !csStorage.getChecksum(file, rd.getTarget()).equals(FileUtil.computeChecksum(file));
         }
         if (markDirty) {
           // if it is full project rebuild, all storages are already completely cleared;

@@ -42,6 +42,7 @@ import org.jetbrains.jps.incremental.storage.Checksums;
 import org.jetbrains.jps.incremental.storage.Timestamps;
 import org.jetbrains.jps.model.module.JpsModule;
 import org.jetbrains.jps.service.SharedThreadPool;
+import sun.security.krb5.internal.ccache.FileCredentialsCache;
 
 import java.io.*;
 import java.util.*;
@@ -345,7 +346,8 @@ final class BuildSession implements Runnable, CanceledStatus {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Applying dirty path from fs event: " + changed);
         }
-        long fileStamp = -1L;
+        // Changed by serebryakov.
+        /*long fileStamp = -1L;
         for (BuildRootDescriptor descriptor : descriptors) {
           if (!descriptor.isGenerated()) { // ignore generates sources as they are processed at the time of generation
             if (fileStamp == -1L) {
@@ -362,6 +364,27 @@ final class BuildSession implements Runnable, CanceledStatus {
             else {
               if (LOG.isDebugEnabled()) {
                 LOG.debug(descriptor.getTarget() + ": Path considered up-to-date: " + changed + "; timestamp= " + stamp);
+              }
+            }
+          }
+        }*/
+        String fileChecksum = "";
+        for (BuildRootDescriptor descriptor : descriptors) {
+          if (!descriptor.isGenerated()) { // ignore generated sources as they are processed at the time of generation
+            if (fileChecksum.isEmpty()) {
+              fileChecksum = FileUtil.computeChecksum(file); // lazy init
+            }
+            final String checksum = checksums.getChecksum(file, descriptor.getTarget());
+            if (!checksum.equals(fileChecksum)) {
+              if (!cacheCleared) {
+                pd.getFSCache().clear();
+                cacheCleared = true;
+              }
+              pd.fsState.markDirty(null, file, descriptor, timestamps, checksums, saveEventStamp);
+            }
+            else {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(descriptor.getTarget() + ": Path considered up-to-date: " + changed + "; checksum= " + checksum);
               }
             }
           }

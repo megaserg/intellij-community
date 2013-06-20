@@ -136,10 +136,14 @@ public class FSState {
   public boolean markDirtyIfNotDeleted(@Nullable CompileContext context,
                                        final File file,
                                        final BuildRootDescriptor rd,
-                                       final @Nullable Timestamps tsStorage) throws IOException {
+                                       final @Nullable Timestamps tsStorage,
+                                       final @Nullable Checksums csStorage) throws IOException {
     final boolean marked = getDelta(rd.getTarget()).markRecompileIfNotDeleted(rd, file);
     if (marked && tsStorage != null) {
       tsStorage.removeStamp(file, rd.getTarget());
+    }
+    if (marked && csStorage != null) {
+      csStorage.removeChecksum(file, rd.getTarget());
     }
     return marked;
   }

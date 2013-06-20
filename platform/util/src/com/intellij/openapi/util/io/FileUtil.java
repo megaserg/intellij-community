@@ -1394,7 +1394,7 @@ public class FileUtil extends FileUtilRt {
     return StringUtil.endsWithIgnoreCase(name, ".jar") || StringUtil.endsWithIgnoreCase(name, ".zip");
   }
 
-  public static byte[] computeChecksum(File file) throws IOException {
+  public static String computeChecksum(File file) throws IOException {
     InputStream fis = new FileInputStream(file);
 
     try {
@@ -1404,10 +1404,10 @@ public class FileUtil extends FileUtilRt {
       while ((read = fis.read(buffer)) > 0) {
         md5.update(buffer, 0, read);
       }
-      return md5.digest();
+      return StringUtil.toHexString(md5.digest());
     }
     catch (NoSuchAlgorithmException e) {
-      return new byte[0];
+      return null;
     }
     finally {
       fis.close();
