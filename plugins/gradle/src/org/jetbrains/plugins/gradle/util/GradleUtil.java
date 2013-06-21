@@ -2,7 +2,6 @@ package org.jetbrains.plugins.gradle.util;
 
 import com.intellij.ide.actions.OpenProjectFileChooserDescriptor;
 import com.intellij.ide.util.PropertiesComponent;
-import com.intellij.openapi.externalSystem.model.ProjectSystemId;
 import com.intellij.openapi.externalSystem.util.ExternalSystemConstants;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.fileChooser.FileTypeDescriptor;
@@ -141,7 +140,7 @@ public class GradleUtil {
     public static final FileChooserDescriptor GRADLE_BUILD_FILE_CHOOSER_DESCRIPTOR = new OpenProjectFileChooserDescriptor(true) {
       @Override
       public boolean isFileSelectable(VirtualFile file) {
-        return GradleConstants.DEFAULT_SCRIPT_NAME.equals(file.getName());
+        return file.getName().endsWith(GradleConstants.EXTENSION);
       }
 
       @Override
@@ -149,7 +148,7 @@ public class GradleUtil {
         if (!super.isFileVisible(file, showHiddenFiles)) {
           return false;
         }
-        return file.isDirectory() || GradleConstants.DEFAULT_SCRIPT_NAME.equals(file.getName());
+        return file.isDirectory() || file.getName().endsWith(GradleConstants.EXTENSION);
       }
     };
 
@@ -159,14 +158,14 @@ public class GradleUtil {
 
   /**
    * Allows to build file system path to the target gradle sub-project given the root project path.
-   * 
-   * @param subProject       target sub-project which 'build.gradle' path we're interested in
-   * @param rootProjectPath  root project's 'build.gradle' path
-   * @return                 path to the given sub-project's 'build.gradle'
+   *
+   * @param subProject       target sub-project which config path we're interested in
+   * @param rootProjectPath  path to root project's directory which contains 'build.gradle'
+   * @return                 path to the given sub-project's directory which contains 'build.gradle'
    */
   @NotNull
   public static String getConfigPath(@NotNull GradleProject subProject, @NotNull String rootProjectPath) {
-    File rootProjectParent = new File(rootProjectPath).getParentFile().getParentFile();
+    File rootProjectParent = new File(rootProjectPath).getParentFile();
     StringBuilder buffer = new StringBuilder(FileUtil.toCanonicalPath(rootProjectParent.getAbsolutePath()));
     Stack<String> stack = ContainerUtilRt.newStack();
     for (GradleProject p = subProject; p != null; p = p.getParent()) {
@@ -175,7 +174,6 @@ public class GradleUtil {
     while (!stack.isEmpty()) {
       buffer.append(ExternalSystemConstants.PATH_SEPARATOR).append(stack.pop());
     }
-    buffer.append(ExternalSystemConstants.PATH_SEPARATOR).append(GradleConstants.DEFAULT_SCRIPT_NAME);
     return buffer.toString();
   }
 

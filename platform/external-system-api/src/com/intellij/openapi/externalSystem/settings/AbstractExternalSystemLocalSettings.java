@@ -15,6 +15,7 @@
  */
 package com.intellij.openapi.externalSystem.settings;
 
+import com.intellij.openapi.externalSystem.ExternalSystemManager;
 import com.intellij.openapi.externalSystem.model.ProjectSystemId;
 import com.intellij.openapi.externalSystem.model.execution.ExternalTaskExecutionInfo;
 import com.intellij.openapi.externalSystem.model.execution.ExternalTaskPojo;
@@ -56,7 +57,7 @@ public abstract class AbstractExternalSystemLocalSettings {
     new AtomicReference<Map<ExternalProjectPojo, Collection<ExternalProjectPojo>>>(
       ContainerUtilRt.<ExternalProjectPojo, Collection<ExternalProjectPojo>>newHashMap()
     );
-  private final AtomicReference<Map<String, Collection<ExternalTaskPojo>>>                 myAvailableTasks                   =
+  private final AtomicReference<Map<String/* external project config path */, Collection<ExternalTaskPojo>>> myAvailableTasks =
     new AtomicReference<Map<String, Collection<ExternalTaskPojo>>>(
       ContainerUtilRt.<String, Collection<ExternalTaskPojo>>newHashMap()
     );
@@ -176,6 +177,31 @@ public abstract class AbstractExternalSystemLocalSettings {
       List<ExternalTaskExecutionInfo> recentTasks = myRecentTasks.get();
       recentTasks.clear();
       recentTasks.addAll(state.recentTasks);
+    }
+    pruneOutdatedEntries();
+  }
+
+  private void pruneOutdatedEntries() {
+    ExternalSystemManager<?,?,?,?,?> manager = ExternalSystemApiUtil.getManager(myExternalSystemId);
+    assert manager != null;
+    Set<String> toForget = ContainerUtilRt.newHashSet();
+    for (ExternalProjectPojo pojo : myAvailableProjects.get().keySet()) {
+      toForget.add(pojo.getPath());
+    }
+    for (String path : myAvailableTasks.get().keySet()) {
+      toForget.add(path);
+    }
+    for (ExternalTaskExecutionInfo taskInfo : myRecentTasks.get()) {
+      toForget.add(taskInfo.getSettings().getExternalProjectPath());
+    }
+    
+    AbstractExternalSystemSettings<?, ?> settings = manager.getSettingsProvider().fun(myProject);
+    for (ExternalProjectSettings projectSettings : settings.getLinkedProjectsSettings()) {
+      toForget.remove(projectSettings.getExternalProjectPath());
+    }
+
+    if (!toForget.isEmpty()) {
+      forgetExternalProject(toForget);
     }
   }
 

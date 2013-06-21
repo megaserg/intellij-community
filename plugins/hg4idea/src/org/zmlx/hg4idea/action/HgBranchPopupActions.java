@@ -15,6 +15,7 @@
  */
 package org.zmlx.hg4idea.action;
 
+import com.intellij.dvcs.DvcsUtil;
 import com.intellij.dvcs.ui.NewBranchAction;
 import com.intellij.openapi.actionSystem.ActionGroup;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -24,6 +25,8 @@ import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vcs.VcsException;
 import com.intellij.openapi.vcs.update.UpdatedFiles;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.util.PlatformIcons;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.zmlx.hg4idea.HgRevisionNumber;
@@ -61,8 +64,8 @@ public class HgBranchPopupActions {
 
   ActionGroup createActions(@Nullable DefaultActionGroup toInsert) {
     DefaultActionGroup popupGroup = new DefaultActionGroup(null, false);
-    popupGroup.addAction(new HgNewBranchAction(myProject, Collections.singletonList(myRepository)));
-    popupGroup.addAction(new HgNewBookmarkAction(myProject, Collections.singletonList(myRepository)));
+    popupGroup.addAction(new HgNewBranchAction(myProject, Collections.singletonList(myRepository), myRepository.getRoot()));
+    popupGroup.addAction(new HgNewBookmarkAction(myProject, Collections.singletonList(myRepository), myRepository.getRoot()));
 
     if (toInsert != null) {
       popupGroup.addAll(toInsert);
@@ -70,9 +73,14 @@ public class HgBranchPopupActions {
 
     popupGroup.addSeparator("Bookmarks");
     List<String> bookmarks = new ArrayList<String>(myRepository.getBookmarks());
+    String currentBookmark = myRepository.getCurrentBookmark();
     Collections.sort(bookmarks);
     for (String bookmark : bookmarks) {
-      popupGroup.add(new BranchActions(myProject, bookmark, myRepository));
+      AnAction bookmarkAction = new BranchActions(myProject, bookmark, myRepository);
+      if (bookmark.equals(currentBookmark)) {
+        bookmarkAction.getTemplatePresentation().setIcon(PlatformIcons.CHECK_ICON);
+      }
+      popupGroup.add(bookmarkAction);
     }
 
     popupGroup.addSeparator("Branches");
@@ -86,38 +94,56 @@ public class HgBranchPopupActions {
     return popupGroup;
   }
 
-  public static class HgNewBranchAction extends NewBranchAction<HgRepository> {
+  private static class HgNewBranchAction extends NewBranchAction<HgRepository> {
+    @NotNull final VirtualFile myPreselectedRepo;
 
-    HgNewBranchAction(@NotNull Project project, @NotNull List<HgRepository> repositories) {
+    HgNewBranchAction(@NotNull Project project, @NotNull List<HgRepository> repositories, @NotNull VirtualFile preselectedRepo) {
       super(project, repositories);
+      myPreselectedRepo = preselectedRepo;
     }
 
     @Override
     public void actionPerformed(AnActionEvent e) {
       final String name = HgUtil.getNewBranchNameFromUser(myProject, "Create New Branch");
-
+      if (name == null) {
+        return;
+      }
       try {
-        new HgBranchCreateCommand(myProject, HgUtil.getRootForSelectedFile(myProject), name).execute(new HgCommandResultHandler() {
+        new HgBranchCreateCommand(myProject, myPreselectedRepo, name).execute(new HgCommandResultHandler() {
           @Override
           public void process(@Nullable HgCommandResult result) {
             myProject.getMessageBus().syncPublisher(HgVcs.BRANCH_TOPIC).update(myProject, null);
             if (HgErrorUtil.hasErrorsInCommandExecution(result)) {
               new HgCommandResultNotifier(myProject)
-                .notifyError(result, "Creation  failed", "Branch creation [" + name + "] failed");
+                .notifyError(result, "Creation failed", "Branch creation [" + name + "] failed");
             }
           }
         });
       }
       catch (HgCommandException exception) {
-        HgAbstractGlobalAction.handleException(myProject, exception);
+        HgAbstractGlobalAction.handleException(myProject, "Can't create new branch: ", exception);
       }
     }
   }
 
-  public static class HgNewBookmarkAction extends NewBranchAction<HgRepository> {
+  private static class HgNewBookmarkAction extends DumbAwareAction {
+    protected final List<HgRepository> myRepositories;
+    protected Project myProject;
+    @NotNull final VirtualFile myPreselectedRepo;
 
-    HgNewBookmarkAction(@NotNull Project project, @NotNull List<HgRepository> repositories) {
-      super(project, repositories, "New Bookmark", "Create new bookmark");
+    HgNewBookmarkAction(@NotNull Project project, @NotNull List<HgRepository> repositories, @NotNull VirtualFile preselectedRepo) {
+      super("New Book&mark", "Create new bookmark", null);
+      myProject = project;
+      myRepositories = repositories;
+      myPreselectedRepo = preselectedRepo;
+    }
+
+    @Override
+    public void update(AnActionEvent e) {
+      if (DvcsUtil.anyRepositoryIsFresh(myRepositories)) {
+        e.getPresentation().setEnabled(false);
+        e.getPresentation().setDescription("Bookmark creation is not possible before the first commit.");
+      }
     }
 
     @Override
@@ -128,14 +154,14 @@ public class HgBranchPopupActions {
       if (bookmarkDialog.isOK()) {
         try {
           final String name = bookmarkDialog.getName();
-          new HgBookmarkCreateCommand(myProject, HgUtil.getRootForSelectedFile(myProject), name, bookmarkDialog.getRevision(),
+          new HgBookmarkCreateCommand(myProject, myPreselectedRepo, name,
                                       bookmarkDialog.isActive()).execute(new HgCommandResultHandler() {
             @Override
             public void process(@Nullable HgCommandResult result) {
               myProject.getMessageBus().syncPublisher(HgVcs.BRANCH_TOPIC).update(myProject, null);
               if (HgErrorUtil.hasErrorsInCommandExecution(result)) {
                 new HgCommandResultNotifier(myProject)
-                  .notifyError(result, "Creation  failed", "Bookmark creation [" + name + "] failed");
+                  .notifyError(result, "Creation failed", "Bookmark creation [" + name + "] failed");
               }
             }
           });

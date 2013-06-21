@@ -38,7 +38,9 @@ import java.lang.reflect.Method;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.RunnableFuture;
 import java.util.regex.Pattern;
 
 @SuppressWarnings({"UtilityClassWithoutPrivateConstructor", "MethodOverridesStaticMethodOfSuperclass"})
@@ -640,6 +642,16 @@ public class FileUtil extends FileUtilRt {
 
   @Nullable
   public static String toCanonicalPath(@Nullable String path, final char separatorChar) {
+    return toCanonicalPath(path, separatorChar, true);
+  }
+
+  @Nullable
+  public static String toCanonicalUriPath(@Nullable String path) {
+    return toCanonicalPath(path, '/', false);
+  }
+
+  @Nullable
+  private static String toCanonicalPath(@Nullable String path, final char separatorChar, boolean removeLastSlash) {
     if (path == null || path.isEmpty()) {
       return path;
     }
@@ -691,7 +703,7 @@ public class FileUtil extends FileUtilRt {
     }
 
     int lastChar = result.length() - 1;
-    if (lastChar >= 0 && result.charAt(lastChar) == '/' && lastChar > start) {
+    if (removeLastSlash && lastChar >= 0 && result.charAt(lastChar) == '/' && lastChar > start) {
       result.deleteCharAt(lastChar);
     }
 

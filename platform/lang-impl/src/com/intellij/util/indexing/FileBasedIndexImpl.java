@@ -1718,9 +1718,13 @@ public class FileBasedIndexImpl extends FileBasedIndex {
     });
   }
 
+  public boolean isFileUpToDate(VirtualFile file) {
+    return !myChangedFilesCollector.myFilesToUpdate.contains(file);
+  }
+
   void processRefreshedFile(@NotNull Project project, @NotNull final com.intellij.ide.caches.FileContent fileContent) {
     myChangedFilesCollector.ensureAllInvalidateTasksCompleted();
-    myChangedFilesCollector.processFileImpl(project, fileContent, false); // ProcessCanceledException will cause readding the file to processing list
+    myChangedFilesCollector.processFileImpl(project, fileContent, false); // ProcessCanceledException will cause re-adding the file to processing list
   }
 
   public void indexFileContent(@Nullable Project project, @NotNull com.intellij.ide.caches.FileContent content) {
@@ -1760,6 +1764,7 @@ public class FileBasedIndexImpl extends FileBasedIndex {
           }
           catch (ProcessCanceledException e) {
             cleanFileContent(fc, psiFile);
+            myChangedFilesCollector.scheduleForUpdate(file);
             throw e;
           }
           catch (StorageException e) {
@@ -1890,7 +1895,11 @@ public class FileBasedIndexImpl extends FileBasedIndex {
     private final Queue<InvalidationTask> myFutureInvalidations = new ConcurrentLinkedQueue<InvalidationTask>();
 
     private final ManagingFS myManagingFS = ManagingFS.getInstance();
-    // No need to react on movement events since files stay valid, their ids don't change and all associated attributes remain intact.
+
+    @Override
+    public void fileMoved(VirtualFileMoveEvent event) {
+      markDirty(event, false);
+    }
 
     @Override
     public void fileCreated(@NotNull final VirtualFileEvent event) {
@@ -1995,7 +2004,7 @@ public class FileBasedIndexImpl extends FileBasedIndex {
       }
     }
 
-    public void scheduleForUpdate(VirtualFile file) {
+    private void scheduleForUpdate(VirtualFile file) {
       myFilesToUpdate.add(file);
     }
 
@@ -2198,10 +2207,6 @@ public class FileBasedIndexImpl extends FileBasedIndex {
             myForceUpdateSemaphore.down();
             // process only files that can affect result
             processFileImpl(project, new com.intellij.ide.caches.FileContent(file), onlyRemoveOutdatedData);
-          } catch (ProcessCanceledException ex) {
-            LOG.assertTrue(!onlyRemoveOutdatedData);
-            myChangedFilesCollector.scheduleForUpdate(file);
-            throw ex;
           }
           finally {
             myForceUpdateSemaphore.up();
@@ -2227,20 +2232,24 @@ public class FileBasedIndexImpl extends FileBasedIndex {
       final VirtualFile file = fileContent.getVirtualFile();
       final boolean reallyRemoved = myFilesToUpdate.remove(file);
       if (reallyRemoved && file.isValid()) {
-        if (onlyRemoveOutdatedData || isTooLarge(file)) {
-          // on shutdown there is no need to re-index the file, just remove outdated data from indices
-          final List<ID<?, ?>> affected = new ArrayList<ID<?, ?>>();
-          for (final ID<?, ?> indexId : myRequiringContentIndices) {  // non requiring content indices should be flushed
-            if (getInputFilter(indexId).acceptInput(file)) {
-              affected.add(indexId);
+        try {
+          if (onlyRemoveOutdatedData || isTooLarge(file)) {
+            // on shutdown there is no need to re-index the file, just remove outdated data from indices
+            final List<ID<?, ?>> affected = new ArrayList<ID<?, ?>>();
+            for (final ID<?, ?> indexId : myRequiringContentIndices) {  // non requiring content indices should be flushed
+              if (getInputFilter(indexId).acceptInput(file)) {
+                affected.add(indexId);
+              }
             }
+            removeFileDataFromIndices(affected, file);
           }
-          removeFileDataFromIndices(affected, file);
+          else {
+            indexFileContent(project, fileContent);
+          }
         }
-        else {
-          indexFileContent(project, fileContent);
+        finally {
+          IndexingStamp.flushCache(file);
         }
-        IndexingStamp.flushCache(file);
       }
     }
   }
@@ -2347,7 +2356,7 @@ public class FileBasedIndexImpl extends FileBasedIndex {
            (isMock(file) || !isFileIndexed(file, indexId));
   }
 
-  public static boolean isFileIndexed(VirtualFile file, ID<?, ?> indexId) {
+  private static boolean isFileIndexed(VirtualFile file, ID<?, ?> indexId) {
     ID id = IndexInfrastructure.getStubId(indexId, file.getFileType());
     return IndexingStamp.isFileIndexed(file, id, IndexInfrastructure.getIndexCreationStamp(id));
   }

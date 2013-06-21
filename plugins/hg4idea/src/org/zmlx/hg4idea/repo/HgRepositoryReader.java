@@ -43,6 +43,7 @@ public class HgRepositoryReader {
   @NotNull private final File myBranchHeadsFile;  // .hg/cache/branchheads (does not exist before first commit)
   @NotNull private final File myCurrentBranch;    // .hg/branch
   @NotNull private final File myBookmarksFile; //.hg/bookmarks
+  @NotNull private final File myCurrentBookmark; //.hg/bookmarks.current
 
   public HgRepositoryReader(@NotNull File hgDir) {
     myHgDir = hgDir;
@@ -52,6 +53,7 @@ public class HgRepositoryReader {
     myBranchHeadsFile = branchesFile.exists() ? branchesFile : new File(new File(myHgDir, "cache"), "branchheads");
     myCurrentBranch = new File(myHgDir, "branch");
     myBookmarksFile = new File(myHgDir, "bookmarks");
+    myCurrentBookmark = new File(myHgDir, "bookmarks.current");
   }
 
   /**
@@ -114,6 +116,7 @@ public class HgRepositoryReader {
 
   @NotNull
   public Collection<String> readBookmarks() {
+    // .hg/bookmarks contains hash + name, f.e. 25e44c95b2612e3cdf29a704dabf82c77066cb67 A_BookMark
     Set<String> bookmarks = new HashSet<String>();
     if (!myBookmarksFile.exists()) {
       return bookmarks;
@@ -126,5 +129,10 @@ public class HgRepositoryReader {
       }
     }
     return bookmarks;
+  }
+
+  @Nullable
+  public String readCurrentBookmark() {
+    return myCurrentBookmark.exists() ? RepositoryUtil.tryLoadFile(myCurrentBookmark) : null;
   }
 }
