@@ -1,9 +1,10 @@
 package org.jetbrains.jps.incremental.storage;
 
+import com.intellij.openapi.util.io.FileUtil;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Random;
 
 /**
  * @author Sergey Serebryakov
@@ -20,33 +21,32 @@ public class ProjectHashTest {
     if (!deletedFile.exists()) deletedFile.createNewFile();
     File changedFile = new File(ourProjectRoot, "t/txt.txt.");
     PrintWriter p = new PrintWriter(changedFile);
-    p.write(""+new Random().nextInt());
+    p.write("FILE CONTENT NUMBER ONE ONE ONE");
     p.close();
 
     TreeActualizer a = new TreeActualizer();
 
-    ProjectFileTree ft = new ProjectFileTreeImpl();
-    ProjectHashTree ht = new ProjectHashTreeImpl();
+    File dataStorageDirectory = FileUtil.createTempDirectory("actualizer-test-", null);
+    ProjectHashedFileTree tree = new ProjectHashedFileTreeImpl(dataStorageDirectory);
     System.err.println("Actualizing 1...");
-    a.actualize(ourProjectRoot, ft, ht, ".", ".");
-    System.out.println(ft.listSubtree("."));
+    a.actualize(ourProjectRoot, tree, ".", ".");
+    System.out.println(tree.listSubtree("."));
 
     createdFile.createNewFile();
     deletedFile.delete();
     PrintWriter q = new PrintWriter(changedFile);
-    q.write(""+new Random().nextInt());
+    q.write("FILE CONTENT NUMBER TWO TWO TWO");
     q.close();
 
     System.err.println("Actualizing 2...");
-    a.actualize(ourProjectRoot, ft, ht, ".", ".");
-    System.out.println(ft.listSubtree("."));
-    System.out.println("File tree size: " + ft.size());
-    System.out.println("Hash tree size: " + ht.size());
+    a.actualize(ourProjectRoot, tree, ".", ".");
+    System.out.println(tree.listSubtree("."));
+    System.out.println("Tree size: " + tree.nodesCount());
 
     if (createdFile.exists()) createdFile.delete();
     if (!deletedFile.exists()) deletedFile.createNewFile();
     p = new PrintWriter(changedFile);
-    p.write(""+new Random().nextInt());
+    p.write("FILE CONTENT NUMBER ONE ONE ONE");
     p.close();
   }
 
@@ -57,59 +57,63 @@ public class ProjectHashTest {
     if (!deletedFile.exists()) deletedFile.createNewFile();
     File changedFile = new File(ourProjectRoot, "t/txt.txt.");
     PrintWriter p = new PrintWriter(changedFile);
-    p.write(""+new Random().nextInt());
+    p.write("FILE CONTENT NUMBER ONE ONE ONE");
     p.close();
 
     TreeActualizer a = new TreeActualizer();
 
-    ProjectFileTree ft1 = new ProjectFileTreeImpl();
-    ProjectHashTree ht1 = new ProjectHashTreeImpl();
+    File dataStorageDirectory1 = FileUtil.createTempDirectory("comparer-test1-", null);
+    ProjectHashedFileTree tree1 = new ProjectHashedFileTreeImpl(dataStorageDirectory1);
     System.err.println("Actualizing 1...");
-    a.actualize(ourProjectRoot, ft1, ht1, ".", ".");
-    System.out.println(ft1.listSubtree("."));
+    a.actualize(ourProjectRoot, tree1, ".", ".");
+    System.out.println(tree1.listSubtree("."));
 
     createdFile.createNewFile();
     deletedFile.delete();
     PrintWriter q = new PrintWriter(changedFile);
-    q.write(""+new Random().nextInt());
+    q.write("FILE CONTENT NUMBER TWO TWO TWO");
     q.close();
 
-    ProjectFileTree ft2 = new ProjectFileTreeImpl();
-    ProjectHashTree ht2 = new ProjectHashTreeImpl();
+    File dataStorageDirectory2 = FileUtil.createTempDirectory("comparer-test2-", null);
+    ProjectHashedFileTree tree2 = new ProjectHashedFileTreeImpl(dataStorageDirectory2);
     System.err.println("Actualizing 2...");
-    a.actualize(ourProjectRoot, ft2, ht2, ".", ".");
-    System.out.println(ft2.listSubtree("."));
+    a.actualize(ourProjectRoot, tree2, ".", ".");
+    System.out.println(tree2.listSubtree("."));
 
     TreeDifferenceCollector c = new TreeDifferenceCollector();
-    TreeComparator.compare(ft2, ft1, ht2, ht1, c, ".");
+    TreeComparator.compare(tree1, tree2, c, ".");
     System.out.println(c);
 
     if (createdFile.exists()) createdFile.delete();
     if (!deletedFile.exists()) deletedFile.createNewFile();
     p = new PrintWriter(changedFile);
-    p.write(""+new Random().nextInt());
+    p.write("FILE CONTENT NUMBER ONE ONE ONE");
     p.close();
   }
 
   public static void main(String[] args) throws IOException {
     //testActualize();
     //testCompare();
+    try {
+      Thread.sleep(10000);
+    }
+    catch (InterruptedException e) {
+      System.err.println("Interrupted");
+    }
     stressTestActualize();
   }
 
   private static void stressTestActualize() throws IOException {
     TreeActualizer a = new TreeActualizer();
-    ProjectFileTree ft = new ProjectFileTreeImpl();
-    ProjectHashTree ht = new ProjectHashTreeImpl();
+    File dataStorageDirectory = FileUtil.createTempDirectory("idea-actualizer-test-", null);
+    ProjectHashedFileTree tree = new ProjectHashedFileTreeImpl(dataStorageDirectory);
     System.err.println("Actualizing...");
 
     long start = System.currentTimeMillis();
-    a.actualize(ideaProjectRoot, ft, ht, ".", ".");
+    a.actualize(ideaProjectRoot, tree, ".", ".");
     long finish = System.currentTimeMillis();
 
-    System.err.println("File tree size: " + ft.size());
-    System.err.println("Hash tree size: " + ht.size());
-    //System.out.println(ft.listSubtree("."));
+    System.err.println("Tree size: " + tree.nodesCount());
     System.err.println("Time consumed: " + (finish - start)/1000.0);
   }
 }

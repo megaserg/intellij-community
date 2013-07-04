@@ -119,6 +119,12 @@ public abstract class AbstractStateStorage<Key, T> implements StorageOwner {
     }
   }
 
+  public boolean containsKey(Key key) throws IOException {
+    synchronized (myDataLock) {
+      return myMap.containsMapping(key);
+    }
+  }
+
   public Collection<Key> getKeys() throws IOException {
     synchronized (myDataLock) {
       return myMap.getAllKeysWithExistingMapping();
