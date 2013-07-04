@@ -9,11 +9,7 @@ import java.util.Map;
  * @author Sergey Serebryakov
  */
 public class ProjectHashTreeImpl implements ProjectHashTree {
-  private Map<String, String> hashes;
-
-  public ProjectHashTreeImpl() {
-    hashes = new HashMap<String, String>();
-  }
+  private Map<String, String> hashes = new HashMap<String, String>();
 
   @Nullable
   @Override

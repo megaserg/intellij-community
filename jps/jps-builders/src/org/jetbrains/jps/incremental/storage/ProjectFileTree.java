@@ -8,7 +8,7 @@ import java.util.Collection;
 
 /**
  * The interface describes a tree representing a directory tree.
- * Files and empty directories are leaf nodes. Non-empty directories are inner nodes.
+ * It might be supposed that files and empty directories are leaf nodes, while non-empty directories are inner nodes.
  * The paths stored are relative to the project/target root directory.
  */
 public interface ProjectFileTree {
@@ -31,11 +31,15 @@ public interface ProjectFileTree {
 
   void addFile(String path, String parentPath);
 
+  /**
+   * Removes the whole subtree of the given node, including the given node itself.
+   * Applicable both to directory and file node.
+   */
   void removeSubtree(String path);
 
   /**
    * Returns paths of the immediate children of the given node.
-   * The given node is assumed to be a directory, i.e. isDirectory(dirPath) == true.
+   * The given node is assumed to be a directory.
    */
   Collection<String> getSortedCopyOfChildrenPaths(String dirPath);
 
@@ -45,5 +49,8 @@ public interface ProjectFileTree {
    */
   Collection<String> listSubtree(String path);
 
+  /**
+   * @return The total number of nodes in the tree.
+   */
   int size();
 }

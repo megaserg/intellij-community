@@ -9,8 +9,9 @@ import java.util.*;
  */
 public class ProjectFileTreeImpl implements ProjectFileTree {
   private static final String ROOT_DIRECTORY = ".";
-  private Map<String, String> nodes = new HashMap<String, String>(); // maps path -> parent path
-  private Map<String, SortedSet<String>> tree = new HashMap<String, SortedSet<String>>(); // maps path -> children paths
+
+  private Map<String, String> nodes = new HashMap<String, String>(); // maps (path) to (parent path)
+  private Map<String, SortedSet<String>> tree = new HashMap<String, SortedSet<String>>(); // maps (directory path) to (set of children paths)
 
   public ProjectFileTreeImpl() {
     nodes.put(ROOT_DIRECTORY, null);
@@ -18,7 +19,7 @@ public class ProjectFileTreeImpl implements ProjectFileTree {
   }
 
   private SortedSet<String> getChildrenSet(String key) {
-    if (!isDirectory(key)) {
+    if (Debug.DEBUG && !isDirectory(key)) {
       throw new RuntimeException("Cannot get children of a file");
     }
     return tree.get(key);
