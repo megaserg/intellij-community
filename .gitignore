@@ -1,8 +1,5 @@
 /config
 /system
-/out
 .idea/workspace.xml
-.idea/dictionaries
-.idea/inspectionProfiles/idea_default.xml
-.idea/misc.xml
+/out
 .DS_Store
