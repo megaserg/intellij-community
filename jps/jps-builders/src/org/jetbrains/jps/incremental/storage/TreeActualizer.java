@@ -2,7 +2,6 @@ package org.jetbrains.jps.incremental.storage;
 
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.StringUtil;
-import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
@@ -13,9 +12,11 @@ import java.security.MessageDigest;
  */
 public class TreeActualizer {
   private HashProvider myHashProvider;
+  private byte[] buffer = new byte[1024*50];
 
   public TreeActualizer() {
-    this(new MD5HashProvider());
+    this(new SHA1HashProvider());
+    //this(new MD5HashProvider());
   }
 
   public TreeActualizer(HashProvider provider) {
@@ -38,7 +39,6 @@ public class TreeActualizer {
 
     try {
       int read;
-      byte[] buffer = new byte[1024];
       MessageDigest md = myHashProvider.getMessageDigest();
       while ((read = fis.read(buffer)) > 0) {
         md.update(buffer, 0, read);
@@ -73,11 +73,11 @@ public class TreeActualizer {
     }
 
     StringBuilder content = new StringBuilder();
-    for (String childPath : tree.getSortedCopyOfChildrenPaths(path)) {
+    for (String childName : tree.getSortedCopyOfChildrenNames(path)) {
+      String childPath = tree.getPathByName(path, childName);
       String childHash = tree.getHash(childPath);
       content.append(childHash);
     }
-
     String hashedName = hashString(dir.getName());
     String hashedContent = hashString(content.toString());
 
@@ -101,7 +101,8 @@ public class TreeActualizer {
       boolean rehashingNeeded = false;
 
       if (tree.hasDirectory(path)) {
-        for (String childPath : tree.getSortedCopyOfChildrenPaths(path)) {
+        for (String childName : tree.getSortedCopyOfChildrenNames(path)) {
+          String childPath = tree.getPathByName(path, childName);
           File child = new File(projectRoot, childPath);
           if (!child.exists()) {
             tree.removeSubtree(childPath);
@@ -122,7 +123,7 @@ public class TreeActualizer {
         throw new RuntimeException("Cannot list files for directory " + file);
       }
       for (File child : children) {
-        String childPath = FileUtil.getRelativePath(projectRoot, child);
+        String childPath = FileUtil.getRelativePath(projectRoot.getAbsolutePath(), child.getAbsolutePath(), File.separatorChar);
         if (Debug.DEBUG && childPath == null) {
           throw new RuntimeException("Cannot get relative path for child " + child);
         }

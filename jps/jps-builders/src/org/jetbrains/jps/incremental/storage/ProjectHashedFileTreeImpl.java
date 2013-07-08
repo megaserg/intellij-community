@@ -12,28 +12,28 @@ import java.util.TreeSet;
  * @author Sergey Serebryakov
  */
 
-// TODO: guarantee system-independent strings?
+// TODO: ensure system-independent strings
+// TODO: Ideas for optimization:
+// - Use byte array representation of hash, instead of string (=> 75% less memory/disk space => less time spent reading/instantiating strings + no need for toHexString)
+// - Profiler shows toLowerCase() takes 5% of the time (because of getRelativePath()) => carry relative path as a recursion param
+// - Implement my own getNameByPath/getPathByName/getParent (although it might be OK to continue using new File())
+// - Reuse the same MessageDigest instance (as a singleton) - NB: always reset
 
 public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
   private static final String ROOT_DIRECTORY = ".";
-  private static final String ROOT_PARENT_DIRECTORY = "..";
   private static final String INITIAL_DIRECTORY_HASH = "initial_directory_hash";
   private int nodesCount = 0;
   private int directoriesCount = 0;
 
-  //private Map<String, String> nodes = new HashMap<String, String>(); // maps (path) to (parent path)
   //private Map<String, String> hashes = new HashMap<String, String>(); // maps (path) to (hash)
   //private Map<String, SortedSet<String>> tree = new HashMap<String, SortedSet<String>>(); // maps (directory path) to (sorted set of children paths)
-  private PathToPathMapping nodes;
   private PathToStringMapping hashes;
   private PathToChildrenMapping tree;
 
   public ProjectHashedFileTreeImpl(@NotNull File dataStorageDirectory) throws IOException {
-    nodes = new PathToPathMapping(new File(dataStorageDirectory, "nodes"));
     hashes = new PathToStringMapping(new File(dataStorageDirectory, "hashes"));
     tree = new PathToChildrenMapping(new File(dataStorageDirectory, "tree"));
 
-    nodes.put(ROOT_DIRECTORY, ROOT_PARENT_DIRECTORY);
     hashes.put(ROOT_DIRECTORY, INITIAL_DIRECTORY_HASH);
     tree.put(ROOT_DIRECTORY, new TreeSet<String>());
     nodesCount = 1;
@@ -53,7 +53,8 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
     if (Debug.DEBUG && !hasNode(path)) {
       throw new RuntimeException("Cannot get parent of a non-existent path " + path);
     }
-    return nodes.get(path);
+    //return nodes.get(path);
+    return new File(path).getParent();
   }
 
   private void addChild(String parent, String child) {
@@ -73,12 +74,12 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
   }
 
   private boolean hasNode(String path) {
-    return nodes.containsKey(path);
+    return hashes.containsKey(path);
   }
 
   @Override
   public boolean hasDirectory(String path) {
-    return hasNode(path) && tree.containsKey(path);
+    return /*hasNode(path) && */tree.containsKey(path);
   }
 
   @Override
@@ -86,12 +87,22 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
     return hasNode(path) && !tree.containsKey(path);
   }
 
+  @NotNull
+  private String getNameByPath(String path) {
+    return new File(path).getName();
+  }
+
+  @NotNull
+  public String getPathByName(String parentPath, String name) {
+    return new File(parentPath, name).getPath();
+  }
+
   private void addNode(String path, String parentPath, String hash) {
     if (Debug.DEBUG && hasNode(path)) {
       throw new RuntimeException("The path " + path + " is already present in the tree");
     }
-    nodes.put(path, parentPath);
-    addChild(parentPath, path);
+    String name = getNameByPath(path);
+    addChild(parentPath, name);
     //System.err.println("Created hash for path " + path + " (" + hash + ")");
     hashes.put(path, hash);
     nodesCount++;
@@ -102,8 +113,8 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
       throw new RuntimeException("Cannot remove non-existent path " + path);
     }
     String parent = getParent(path);
-    nodes.remove(path);
-    removeChild(parent, path);
+    String name = getNameByPath(path);
+    removeChild(parent, name);
     hashes.remove(path);
     nodesCount--;
   }
@@ -128,8 +139,9 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
   @Override
   public void removeSubtree(String path) {
     if (hasDirectory(path)) {
-      Collection<String> children = getSortedCopyOfChildrenPaths(path); // can't iterate over the changing set
-      for (String childPath : children) {
+      Collection<String> childrenNames = getSortedCopyOfChildrenNames(path); // can't iterate over the changing set
+      for (String childName : childrenNames) {
+        String childPath = getPathByName(path, childName);
         removeSubtree(childPath);
       }
       tree.remove(path);
@@ -140,14 +152,15 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
 
   @NotNull
   @Override
-  public Collection<String> getSortedCopyOfChildrenPaths(String dirPath) {
+  public Collection<String> getSortedCopyOfChildrenNames(String dirPath) {
     return new TreeSet<String>(getChildrenSet(dirPath));
   }
 
   private void accumulateSubtree(String path, Collection<String> result) {
     result.add(path);
     if (hasDirectory(path)) {
-      for (String childPath : getSortedCopyOfChildrenPaths(path)) {
+      for (String childName : getSortedCopyOfChildrenNames(path)) {
+        String childPath = getPathByName(path, childName);
         accumulateSubtree(childPath, result);
       }
     }

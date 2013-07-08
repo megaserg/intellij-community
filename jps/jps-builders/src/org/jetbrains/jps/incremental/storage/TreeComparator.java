@@ -29,30 +29,30 @@ public class TreeComparator {
         collector.addChangedFile(path);
       }
       else if (myTree.hasDirectory(path) && yourTree.hasDirectory(path)) {
-        Collection<String> myChildrenPaths = myTree.getSortedCopyOfChildrenPaths(path);
-        Collection<String> yourChildrenPaths = yourTree.getSortedCopyOfChildrenPaths(path);
+        Collection<String> myChildrenNames = myTree.getSortedCopyOfChildrenNames(path);
+        Collection<String> yourChildrenNames = yourTree.getSortedCopyOfChildrenNames(path);
 
-        Iterator<String> myIterator = myChildrenPaths.iterator();
-        Iterator<String> yourIterator = yourChildrenPaths.iterator();
-        String myChildPath = safeNext(myIterator);
-        String yourChildPath = safeNext(yourIterator);
+        Iterator<String> myIterator = myChildrenNames.iterator();
+        Iterator<String> yourIterator = yourChildrenNames.iterator();
+        String myChildName = safeNext(myIterator);
+        String yourChildName = safeNext(yourIterator);
 
-        while (myChildPath != null || yourChildPath != null) {
-          int compare = StringUtil.compare(myChildPath, yourChildPath, /*ignoreCase = */ false);
+        while (myChildName != null || yourChildName != null) {
+          int compare = StringUtil.compare(myChildName, yourChildName, /*ignoreCase = */ false);
           // Arguments can be null, it's OK as long as we don't use the result.
 
-          if (yourChildPath == null || myChildPath != null && compare == -1) {
-            collector.addCreatedFiles(myTree.listSubtree(myChildPath));
-            myChildPath = safeNext(myIterator);
+          if (yourChildName == null || myChildName != null && compare == -1) {
+            collector.addCreatedFiles(myTree.listSubtree(myTree.getPathByName(path, myChildName)));
+            myChildName = safeNext(myIterator);
           }
-          else if (myChildPath == null || yourChildPath != null && compare == 1) {
-            collector.addDeletedFiles(yourTree.listSubtree(yourChildPath));
-            yourChildPath = safeNext(yourIterator);
+          else if (myChildName == null || yourChildName != null && compare == 1) {
+            collector.addDeletedFiles(yourTree.listSubtree(yourTree.getPathByName(path, yourChildName)));
+            yourChildName = safeNext(yourIterator);
           }
           else if (compare == 0) {
-            compare(myTree, yourTree, collector, myChildPath);
-            myChildPath = safeNext(myIterator);
-            yourChildPath = safeNext(yourIterator);
+            compare(myTree, yourTree, collector, myTree.getPathByName(path, myChildName));
+            myChildName = safeNext(myIterator);
+            yourChildName = safeNext(yourIterator);
           }
         }
       }

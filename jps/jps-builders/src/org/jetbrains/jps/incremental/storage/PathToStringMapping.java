@@ -2,6 +2,7 @@ package org.jetbrains.jps.incremental.storage;
 
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.util.io.DataExternalizer;
+import com.intellij.util.io.EnumeratorStringDescriptor;
 import com.intellij.util.io.IOUtil;
 import com.intellij.util.io.KeyDescriptor;
 import org.jetbrains.annotations.NonNls;
@@ -17,12 +18,12 @@ import java.io.IOException;
 public class PathToStringMapping extends AbstractStateStorage<String, String> {
 
   public PathToStringMapping(@NonNls File storePath) throws IOException {
-    super(storePath, new PathStringDescriptor(), new StringExternalizer());
+    super(storePath, new EnumeratorStringDescriptor(), new StringExternalizer());
   }
 
-  public void put(String keyPath, String value) {
+  public void put(String path, String value) {
     try {
-      update(FileUtil.toSystemIndependentName(keyPath), value);
+      update(FileUtil.toSystemIndependentName(path), value);
     }
     catch (IOException e) {
       throw new RuntimeException("Cannot put value to the persistent map");
@@ -62,12 +63,20 @@ public class PathToStringMapping extends AbstractStateStorage<String, String> {
 
     @Override
     public void save(DataOutput out, String value) throws IOException {
-      IOUtil.writeString(value, out);
+      /*IOUtil.writeString(value, out);*/
+      out.writeInt(value.length());
+      out.writeChars(value);
     }
 
     @Override
     public String read(DataInput in) throws IOException {
-      return IOUtil.readString(in);
+      /*return IOUtil.readString(in);*/
+      int length = in.readInt();
+      char[] chars = new char[length];
+      for (int j = 0; j < length; j++) {
+        chars[j] = in.readChar();
+      }
+      return new String(chars);
     }
   }
 }

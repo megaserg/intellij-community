@@ -94,26 +94,80 @@ public class ProjectHashTest {
   public static void main(String[] args) throws IOException {
     //testActualize();
     //testCompare();
-    try {
+    /*try {
       Thread.sleep(10000);
     }
     catch (InterruptedException e) {
       System.err.println("Interrupted");
-    }
-    stressTestActualize();
+    }*/
+    ideaTestActualize();
+    //ideaTestCompare();
   }
 
-  private static void stressTestActualize() throws IOException {
+  private static void ideaTestActualize() throws IOException {
+    File changedFile = new File(ideaProjectRoot, "jps\\jps-builders\\src\\org\\jetbrains\\jps\\incremental\\storage\\Something.java");
+    PrintWriter p = new PrintWriter(changedFile);
+    p.write("FILE CONTENT NUMBER ONE ONE ONE");
+    p.close();
+
     TreeActualizer a = new TreeActualizer();
     File dataStorageDirectory = FileUtil.createTempDirectory("idea-actualizer-test-", null);
     ProjectHashedFileTree tree = new ProjectHashedFileTreeImpl(dataStorageDirectory);
-    System.err.println("Actualizing...");
+    System.err.println("Actualizing 1...");
 
-    long start = System.currentTimeMillis();
+    long start1 = System.currentTimeMillis();
     a.actualize(ideaProjectRoot, tree, ".", ".");
-    long finish = System.currentTimeMillis();
+    long finish1 = System.currentTimeMillis();
 
     System.err.println("Tree size: " + tree.nodesCount());
-    System.err.println("Time consumed: " + (finish - start)/1000.0);
+    System.err.println("Time consumed: " + (finish1 - start1)/1000.0);
+
+    PrintWriter q = new PrintWriter(changedFile);
+    q.write("FILE CONTENT NUMBER TWO TWO TWO");
+    q.close();
+
+    System.err.println("Actualizing 2...");
+
+    long start2 = System.currentTimeMillis();
+    a.actualize(ideaProjectRoot, tree, ".", ".");
+    long finish2 = System.currentTimeMillis();
+
+    System.err.println("Tree size: " + tree.nodesCount());
+    System.err.println("Time consumed: " + (finish2 - start2)/1000.0);
+  }
+
+  private static void ideaTestCompare() throws IOException {
+    File changedFile = new File(ideaProjectRoot, "jps\\jps-builders\\src\\org\\jetbrains\\jps\\incremental\\storage\\Something.java");
+    PrintWriter p = new PrintWriter(changedFile);
+    p.write("FILE CONTENT NUMBER ONE ONE ONE");
+    p.close();
+
+    File dataStorageDirectory1 = FileUtil.createTempDirectory("idea-comparator-test1-", null);
+    ProjectHashedFileTree tree1 = new ProjectHashedFileTreeImpl(dataStorageDirectory1);
+    System.err.println("Actualizing 1...");
+
+    long start1 = System.currentTimeMillis();
+    new TreeActualizer().actualize(ideaProjectRoot, tree1, ".", ".");
+    long finish1 = System.currentTimeMillis();
+    System.err.println("Time consumed 1: " + (finish1 - start1)/1000.0);
+
+    PrintWriter q = new PrintWriter(changedFile);
+    q.write("FILE CONTENT NUMBER TWO TWO TWO");
+    q.close();
+
+    File dataStorageDirectory2 = FileUtil.createTempDirectory("idea-comparator-test2-", null);
+    ProjectHashedFileTree tree2 = new ProjectHashedFileTreeImpl(dataStorageDirectory2);
+    System.err.println("Actualizing 2...");
+    long start2 = System.currentTimeMillis();
+    new TreeActualizer().actualize(ideaProjectRoot, tree2, ".", ".");
+    long finish2 = System.currentTimeMillis();
+    System.err.println("Time consumed 2: " + (finish2 - start2)/1000.0);
+
+    TreeDifferenceCollector c = new TreeDifferenceCollector();
+    long start3 = System.currentTimeMillis();
+    TreeComparator.compare(tree1, tree2, c, ".");
+    long finish3 = System.currentTimeMillis();
+    System.err.println("Time consumed 3: " + (finish3 - start3)/1000.0);
+    System.err.println(c);
   }
 }

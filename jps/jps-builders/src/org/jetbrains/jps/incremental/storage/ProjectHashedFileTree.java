@@ -31,12 +31,14 @@ public interface ProjectHashedFileTree {
    */
   void removeSubtree(String path);
 
+  String getPathByName(String parentPath, String name);
+
   /**
-   * Returns paths of the immediate children of the given node.
+   * Returns names of the immediate children of the given node.
    * The given node is assumed to be a directory.
    */
   @NotNull
-  Collection<String> getSortedCopyOfChildrenPaths(String dirPath);
+  Collection<String> getSortedCopyOfChildrenNames(String dirPath);
 
   /**
    * Returns paths of all nodes in the subtree of the given node, including the given node itself.

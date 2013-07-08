@@ -1,7 +1,9 @@
 package org.jetbrains.jps.incremental.storage;
 
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.util.containers.HashSet;
 import com.intellij.util.io.DataExternalizer;
+import com.intellij.util.io.EnumeratorStringDescriptor;
 import com.intellij.util.io.IOUtil;
 import gnu.trove.THashSet;
 import org.jetbrains.annotations.NotNull;
@@ -19,20 +21,12 @@ import java.util.Set;
 public class PathToChildrenMapping extends AbstractStateStorage<String, Collection<String>> {
 
   public PathToChildrenMapping(File storePath) throws IOException {
-    super(storePath, new PathStringDescriptor(), new PathCollectionExternalizer());
-  }
-
-  private static Collection<String> normalizePaths(Collection<String> outputs) {
-    Collection<String> normalized = new ArrayList<String>(outputs.size());
-    for (String out : outputs) {
-      normalized.add(FileUtil.toSystemIndependentName(out));
-    }
-    return normalized;
+    super(storePath, new EnumeratorStringDescriptor(), new PathCollectionExternalizer());
   }
 
   public void put(String path, Collection<String> children) {
     try {
-      super.update(FileUtil.toSystemIndependentName(path), normalizePaths(children));
+      super.update(FileUtil.toSystemIndependentName(path), children);
     }
     catch (IOException e) {
       throw new RuntimeException("Cannot put value to the persistent map");
@@ -48,6 +42,7 @@ public class PathToChildrenMapping extends AbstractStateStorage<String, Collecti
     }
   }
 
+  @Override
   public boolean containsKey(String path) {
     try {
       return super.containsKey(FileUtil.toSystemIndependentName(path));
@@ -67,25 +62,23 @@ public class PathToChildrenMapping extends AbstractStateStorage<String, Collecti
     }
   }
 
-  public void appendChild(String parent, String child) {
-    parent = FileUtil.toSystemIndependentName(parent);
-    child = FileUtil.toSystemIndependentName(child);
+  public void appendChild(String parent, String childName) {
     try {
-      super.appendData(parent, Collections.singleton(child));
+      super.appendData(FileUtil.toSystemIndependentName(parent), Collections.singleton(childName));
     }
     catch (IOException e) {
       throw new RuntimeException("Cannot append value to the persistent map");
     }
   }
 
-  public void removeChild(String parent, String child) {
+  public void removeChild(String parent, String childName) {
     parent = FileUtil.toSystemIndependentName(parent);
-    child = FileUtil.toSystemIndependentName(child);
     try {
       final Collection<String> children = super.getState(parent);
       if (children != null) {
-        final boolean removed = children.remove(child);
+        final boolean removed = children.remove(childName);
         if (removed) {
+          // The collection might be empty now, but it's OK.
           super.update(parent, children);
         }
       }
@@ -99,16 +92,23 @@ public class PathToChildrenMapping extends AbstractStateStorage<String, Collecti
   private static class PathCollectionExternalizer implements DataExternalizer<Collection<String>> {
     public void save(DataOutput out, Collection<String> value) throws IOException {
       for (String str : value) {
-        IOUtil.writeString(str, out);
+        /*IOUtil.writeString(str, out);*/
+        out.writeInt(str.length());
+        out.writeChars(str);
       }
     }
 
     public Collection<String> read(DataInput in) throws IOException {
-      final Set<String> result = new THashSet<String>(FileUtil.PATH_HASHING_STRATEGY);
+      final Set<String> result = new HashSet<String>(); //THashSet<String>(FileUtil.PATH_HASHING_STRATEGY);
       final DataInputStream stream = (DataInputStream)in;
       while (stream.available() > 0) {
-        final String str = IOUtil.readString(stream);
-        result.add(str);
+        /*final String str = IOUtil.readString(stream);*/
+        int length = in.readInt();
+        char[] chars = new char[length];
+        for (int j = 0; j < length; j++) {
+          chars[j] = in.readChar();
+        }
+        result.add(new String(chars));
       }
       return result;
     }
