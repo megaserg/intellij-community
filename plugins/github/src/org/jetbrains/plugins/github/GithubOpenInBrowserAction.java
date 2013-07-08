@@ -36,7 +36,7 @@ import icons.GithubIcons;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.jetbrains.plugins.github.GithubUtil.*;
+import static org.jetbrains.plugins.github.GithubUtil.setVisibleEnabled;
 
 /**
  * Created by IntelliJ IDEA.
@@ -68,8 +68,7 @@ public class GithubOpenInBrowserAction extends DumbAwareAction {
       return;
     }
 
-    // Check that given repository is properly configured git repository
-    if (!isRepositoryOnGitHub(gitRepository)) {
+    if (!GithubUtil.isRepositoryOnGitHub(gitRepository)) {
       setVisibleEnabled(e, false, false);
       return;
     }
@@ -89,7 +88,6 @@ public class GithubOpenInBrowserAction extends DumbAwareAction {
     setVisibleEnabled(e, true, true);
   }
 
-  @SuppressWarnings("ConstantConditions")
   @Override
   public void actionPerformed(final AnActionEvent e) {
     final Project project = e.getData(PlatformDataKeys.PROJECT);
@@ -100,8 +98,20 @@ public class GithubOpenInBrowserAction extends DumbAwareAction {
 
     GitRepositoryManager manager = GitUtil.getRepositoryManager(project);
     final GitRepository repository = manager.getRepositoryForFile(virtualFile);
+    if (repository == null) {
+      StringBuilder details = new StringBuilder("file: " + virtualFile.getPresentableUrl() + "; Git repositories: ");
+      for (GitRepository repo : manager.getRepositories()) {
+        details.append(repo.getPresentableUrl()).append("; ");
+      }
+      notifyError(project, "Can't find git repository", details.toString());
+      return;
+    }
 
-    final String githubRemoteUrl = findGithubRemoteUrl(repository);
+    final String githubRemoteUrl = GithubUtil.findGithubRemoteUrl(repository);
+    if (githubRemoteUrl == null) {
+      notifyError(project, "Can't find github remote", null);
+      return;
+    }
 
     final String rootPath = repository.getRoot().getPath();
     final String path = virtualFile.getPath();
@@ -117,25 +127,36 @@ public class GithubOpenInBrowserAction extends DumbAwareAction {
 
     String relativePath = path.substring(rootPath.length());
     String urlToOpen = makeUrlToOpen(e, relativePath, branch, githubRemoteUrl);
+    if (urlToOpen == null) {
+      notifyError(project, "Can't create properly url", githubRemoteUrl);
+      return;
+    }
     BrowserUtil.launchBrowser(urlToOpen);
   }
 
-  private static void notifyError(@NotNull Project project, @NotNull String message, @Nullable String logDetails) {
-    Notificator.getInstance(project).notifyError(CANNOT_OPEN_IN_BROWSER, message);
-    LOG.info(message + (logDetails == null ? "" : logDetails));
-  }
-
+  @Nullable
   private static String makeUrlToOpen(@NotNull AnActionEvent e, @NotNull String relativePath, @NotNull String branch,
                                       @NotNull String githubRemoteUrl) {
     final StringBuilder builder = new StringBuilder();
-    builder.append(makeGithubRepoUrlFromRemoteUrl(githubRemoteUrl)).append("/blob/").append(branch).append(relativePath);
+    final String githubRepoUrl = GithubUrlUtil.makeGithubRepoUrlFromRemoteUrl(githubRemoteUrl);
+    if (githubRepoUrl == null) {
+      return null;
+    }
+    builder.append(githubRepoUrl).append("/blob/").append(branch).append(relativePath);
+
     final Editor editor = e.getData(PlatformDataKeys.EDITOR);
     if (editor != null && editor.getDocument().getLineCount() >= 1) {
+      // lines are counted internally from 0, but from 1 on github
       SelectionModel selectionModel = editor.getSelectionModel();
       final int begin = editor.getDocument().getLineNumber(selectionModel.getSelectionStart()) + 1;
-      final int end = editor.getDocument().getLineNumber(selectionModel.getSelectionEnd()) + 1;
-      builder.append("#L").append(begin).append('-').append(end); // lines are counted internally from 0, but from 1 on github
+      final int selectionEnd = selectionModel.getSelectionEnd();
+      int end = editor.getDocument().getLineNumber(selectionEnd) + 1;
+      if (editor.getDocument().getLineStartOffset(end - 1) == selectionEnd) {
+        end -= 1;
+      }
+      builder.append("#L").append(begin).append('-').append(end);
     }
+
     return builder.toString();
   }
 
@@ -157,4 +178,8 @@ public class GithubOpenInBrowserAction extends DumbAwareAction {
     return tracked.getNameForRemoteOperations();
   }
 
+  private static void notifyError(@NotNull Project project, @NotNull String message, @Nullable String logDetails) {
+    Notificator.getInstance(project).notifyError(CANNOT_OPEN_IN_BROWSER, message);
+    LOG.info(message + (logDetails == null ? "" : " " + logDetails));
+  }
 }

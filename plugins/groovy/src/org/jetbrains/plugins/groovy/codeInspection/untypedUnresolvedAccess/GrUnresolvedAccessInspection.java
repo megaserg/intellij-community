@@ -93,6 +93,7 @@ public class GrUnresolvedAccessInspection extends GroovySuppressableInspectionTo
 
   public boolean myHighlightIfGroovyObjectOverridden = true;
   public boolean myHighlightIfMissingMethodsDeclared = true;
+  public boolean myHighlightInnerClasses = true;
 
   private static boolean shouldHighlightAsUnresolved(@NotNull GrReferenceExpression referenceExpression) {
     if (GrHighlightUtil.isDeclarationAssignment(referenceExpression)) return false;
@@ -125,10 +126,9 @@ public class GrUnresolvedAccessInspection extends GroovySuppressableInspectionTo
   @Override
   public JComponent createOptionsPanel() {
     final MultipleCheckboxOptionsPanel optionsPanel = new MultipleCheckboxOptionsPanel(this);
-    optionsPanel
-      .addCheckbox(GroovyInspectionBundle.message("highlight.if.groovy.object.methods.overridden"), "myHighlightIfGroovyObjectOverridden");
-    optionsPanel
-      .addCheckbox(GroovyInspectionBundle.message("highlight.if.missing.methods.declared"), "myHighlightIfMissingMethodsDeclared");
+    optionsPanel.addCheckbox(GroovyInspectionBundle.message("highlight.if.groovy.object.methods.overridden"), "myHighlightIfGroovyObjectOverridden");
+    optionsPanel.addCheckbox(GroovyInspectionBundle.message("highlight.if.missing.methods.declared"), "myHighlightIfMissingMethodsDeclared");
+    optionsPanel.addCheckbox(GroovyBundle.message("highlight.constructor.calls.of.a.non.static.inner.classes.without.enclosing.instance.passed"), "myHighlightInnerClasses");
     return optionsPanel;
   }
 
@@ -138,7 +138,7 @@ public class GrUnresolvedAccessInspection extends GroovySuppressableInspectionTo
     return profile.isToolEnabled(unusedDefKey, file);
   }
 
-  private static GrUnresolvedAccessInspection getInstance(PsiFile file, Project project) {
+  public static GrUnresolvedAccessInspection getInstance(PsiFile file, Project project) {
     final InspectionProfile profile = InspectionProjectProfileManager.getInstance(project).getInspectionProfile();
     return (GrUnresolvedAccessInspection)profile.getUnwrappedTool(SHORT_NAME, file);
   }
@@ -176,8 +176,7 @@ public class GrUnresolvedAccessInspection extends GroovySuppressableInspectionTo
 
     if (!(refElement.getParent() instanceof GrPackageDefinition) && resolved == null) {
       String message = GroovyBundle.message("cannot.resolve", refElement.getReferenceName());
-      HighlightInfo info =
-        HighlightInfo.newHighlightInfo(HighlightInfoType.WRONG_REF).range(nameElement).descriptionAndTooltip(message).create();
+      HighlightInfo info = HighlightInfo.newHighlightInfo(HighlightInfoType.WRONG_REF).range(nameElement).descriptionAndTooltip(message).create();
 
       // todo implement for nested classes
       HighlightDisplayKey displayKey = HighlightDisplayKey.find(SHORT_NAME);
@@ -189,6 +188,35 @@ public class GrUnresolvedAccessInspection extends GroovySuppressableInspectionTo
       return info;
     }
 
+    if (refElement.getParent() instanceof GrNewExpression) {
+
+      boolean inStaticContext = isInStaticContext(refElement);
+
+      if (!inStaticContext && GroovySuppressableInspectionTool.isElementToolSuppressedIn(refElement, SHORT_NAME)) return null;
+
+      if (!inStaticContext) {
+        if (!isInspectionEnabled(refElement.getContainingFile(), refElement.getProject())) return null;
+        GrUnresolvedAccessInspection inspection = getInstance(refElement.getContainingFile(), refElement.getProject());
+        assert inspection != null;
+        if (!inspection.myHighlightInnerClasses) return null;
+      }
+
+      GrNewExpression newExpression = (GrNewExpression)refElement.getParent();
+      if (resolved instanceof PsiClass) {
+        PsiClass clazz = (PsiClass)resolved;
+        if (newExpression.getQualifier() == null) {
+          final PsiClass outerClass = clazz.getContainingClass();
+          if (com.intellij.psi.util.PsiUtil.isInnerClass(clazz) &&
+              outerClass != null &&
+              !PsiUtil.hasEnclosingInstanceInScope(outerClass, newExpression, true)) {
+            String qname = clazz.getQualifiedName();
+            LOG.assertTrue(qname != null, clazz.getText());
+            return createAnnotationForRef(refElement, inStaticContext, GroovyBundle.message("cannot.reference.non.static", qname));
+          }
+        }
+      }
+    }
+
     return null;
   }
 
@@ -197,7 +225,7 @@ public class GrUnresolvedAccessInspection extends GroovySuppressableInspectionTo
     PsiElement refNameElement = ref.getReferenceNameElement();
     if (refNameElement == null) return null;
 
-    boolean cannotBeDynamic = PsiUtil.isCompileStatic(ref) || isPropertyAccessInStaticMethod(ref);
+    boolean inStaticContext = PsiUtil.isCompileStatic(ref) || isPropertyAccessInStaticMethod(ref);
     GroovyResolveResult resolveResult = getBestResolveResult(ref);
 
     if (resolveResult.getElement() != null) {
@@ -205,16 +233,17 @@ public class GrUnresolvedAccessInspection extends GroovySuppressableInspectionTo
 
       if (isStaticOk(resolveResult)) return null;
       String message = GroovyBundle.message("cannot.reference.non.static", ref.getReferenceName());
-      return createAnnotationForRef(ref, cannotBeDynamic, message);
+      return createAnnotationForRef(ref, inStaticContext, message);
     }
 
     if (ResolveUtil.isKeyOfMap(ref) || isClassReference(ref)) {
       return null;
     }
 
-    if (!cannotBeDynamic) {
+    if (!inStaticContext) {
       if (!isInspectionEnabled(ref.getContainingFile(), ref.getProject())) return null;
       GrUnresolvedAccessInspection inspection = getInstance(ref.getContainingFile(), ref.getProject());
+      assert inspection != null;
 
       if (!inspection.myHighlightIfGroovyObjectOverridden && areGroovyObjectMethodsOverridden(ref)) return null;
       if (!inspection.myHighlightIfMissingMethodsDeclared && areMissingMethodsDeclared(ref)) return null;
@@ -222,8 +251,8 @@ public class GrUnresolvedAccessInspection extends GroovySuppressableInspectionTo
       if (GroovySuppressableInspectionTool.isElementToolSuppressedIn(ref, SHORT_NAME)) return null;
     }
 
-    if (cannotBeDynamic || shouldHighlightAsUnresolved(ref)) {
-      HighlightInfo info = createAnnotationForRef(ref, cannotBeDynamic, GroovyBundle.message("cannot.resolve", ref.getReferenceName()));
+    if (inStaticContext || shouldHighlightAsUnresolved(ref)) {
+      HighlightInfo info = createAnnotationForRef(ref, inStaticContext, GroovyBundle.message("cannot.resolve", ref.getReferenceName()));
       if (info == null) return null;
 
       HighlightDisplayKey displayKey = HighlightDisplayKey.find(SHORT_NAME);
@@ -235,7 +264,7 @@ public class GrUnresolvedAccessInspection extends GroovySuppressableInspectionTo
         registerAddImportFixes(ref, info, displayKey);
       }
 
-      registerReferenceFixes(ref, info, cannotBeDynamic, displayKey);
+      registerReferenceFixes(ref, info, inStaticContext, displayKey);
       UnresolvedReferenceQuickFixProvider.registerReferenceFixes(ref, new QuickFixActionRegistrarAdapter(info, displayKey));
       OrderEntryFix.registerFixes(new QuickFixActionRegistrarAdapter(info, displayKey), ref);
       return info;
@@ -361,21 +390,30 @@ public class GrUnresolvedAccessInspection extends GroovySuppressableInspectionTo
   }
 
   public static boolean isPropertyAccessInStaticMethod(GrReferenceExpression referenceExpression) {
-    if (referenceExpression.getParent() instanceof GrMethodCall || referenceExpression.getQualifier() != null) return false;
-    GrMember context = PsiTreeUtil.getParentOfType(referenceExpression, GrMember.class, true, GrClosableBlock.class);
+    return isInStaticContext(referenceExpression) &&
+           !(referenceExpression.getParent() instanceof GrMethodCall) &&
+           referenceExpression.getQualifier() == null;
+  }
+
+  private static boolean isInStaticContext(PsiElement place) {
+    GrMember context = PsiTreeUtil.getParentOfType(place, GrMember.class, true, GrClosableBlock.class);
     return (context instanceof GrMethod || context instanceof GrClassInitializer) && context.hasModifierProperty(STATIC);
   }
 
   @Nullable
-  private static HighlightInfo createAnnotationForRef(@NotNull GrReferenceExpression ref,
-                                                      boolean compileStatic,
+  private static HighlightInfo createAnnotationForRef(@NotNull GrReferenceElement ref,
+                                                      boolean strongError,
                                                       @NotNull String message) {
     PsiElement refNameElement = ref.getReferenceNameElement();
     assert refNameElement != null;
 
+    if (strongError) {
+      return HighlightInfo.newHighlightInfo(HighlightInfoType.WRONG_REF).range(refNameElement).descriptionAndTooltip(message).create();
+    }
+
     HighlightDisplayLevel displayLevel = getHighlightDisplayLevel(ref.getProject(), ref);
 
-    if (compileStatic || displayLevel == HighlightDisplayLevel.ERROR) {
+    if (displayLevel == HighlightDisplayLevel.ERROR) {
       return HighlightInfo.newHighlightInfo(HighlightInfoType.WRONG_REF).range(refNameElement).descriptionAndTooltip(message).create();
     }
 
