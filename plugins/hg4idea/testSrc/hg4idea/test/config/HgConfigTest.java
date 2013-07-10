@@ -31,7 +31,7 @@ public class HgConfigTest extends HgPlatformTest {
                  FileUtil.toSystemIndependentName(defaultPath));
   }
 
-  public void testPushPathInClonedRepo() {
+  public void testPushPathInClonedRepo() throws IOException {
     cd(myChildRepo);
     String pushPath = "somePath";
     appendToHgrc(myChildRepo, "\n[paths]\n" +
@@ -51,7 +51,7 @@ public class HgConfigTest extends HgPlatformTest {
                  FileUtil.toSystemIndependentName(defaultPushPath));
   }
 
-  public void testMultiPathConfig() {
+  public void testMultiPathConfig() throws IOException {
     cd(myChildRepo);
     final String path1 = "https://bitbucket.org/nadushnik/hgtestrepo";
     final String path2 = "https://bitbucket.org/nadushnik/javarepo";
@@ -62,9 +62,8 @@ public class HgConfigTest extends HgPlatformTest {
                               "\npath3=" + path3);
     updateRepoConfig(myProject, myChildRepo);
     final Collection<String> paths = HgUtil.getRepositoryPaths(myProject, myChildRepo);
-    final Collection<String> expectedPaths = Arrays.asList(myRepository.getPath(), path1, path2, path3);
-    TestRepositoryUtil.assertEqualCollections(expectedPaths,
-                                              paths);
+    final Collection<String> expectedPaths = Arrays.asList(FileUtil.toSystemDependentName(myRepository.getPath()), path1, path2, path3);
+    TestRepositoryUtil.assertEqualCollections(paths,expectedPaths);
   }
 
   public void testLargeExtensionInClonedRepo() throws IOException {

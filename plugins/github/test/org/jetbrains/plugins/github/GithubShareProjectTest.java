@@ -46,6 +46,7 @@ public class GithubShareProjectTest extends GithubShareProjectTestBase {
 
     cd(myProjectRoot.getPath());
     git("init");
+    setGitIdentity(myProjectRoot);
     git("add file.txt");
     git("commit -m init");
 
@@ -82,7 +83,7 @@ public class GithubShareProjectTest extends GithubShareProjectTestBase {
 
     GithubShareAction.shareProjectOnGithub(myProject, myProjectRoot);
 
-    checkNotification(NotificationType.WARNING, "Failed to commit file during post activities", "No files to commit");
+    checkNotification(NotificationType.WARNING, "Can't finish GitHub sharing process", null);
     checkGitExists();
     checkGithubExists();
     checkRemoteConfigured();
