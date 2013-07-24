@@ -22,7 +22,7 @@ import com.intellij.util.io.IOUtil;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.incremental.storage.AbstractStateStorage;
-import org.jetbrains.jps.incremental.storage.PathStringDescriptor;
+import org.jetbrains.jps.incremental.storage.RelativePathStringDescriptor;
 
 import java.io.*;
 import java.util.Collections;
@@ -34,8 +34,8 @@ import java.util.List;
  * @author nik
  */
 public class ArtifactOutputToSourceMapping extends AbstractStateStorage<String, List<ArtifactOutputToSourceMapping.SourcePathAndRootIndex>> {
-  public ArtifactOutputToSourceMapping(@NonNls File storePath) throws IOException {
-    super(storePath, new PathStringDescriptor(), new SourcePathListExternalizer());
+  public ArtifactOutputToSourceMapping(@NonNls File storePath, File projectRootFile) throws IOException {
+    super(storePath, new RelativePathStringDescriptor(projectRootFile), new SourcePathListExternalizer());
   }
 
   @Override

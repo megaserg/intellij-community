@@ -32,8 +32,8 @@ import java.io.IOException;
 public class InMemoryChecksumStorage extends ChecksumStorage implements Checksums {
   private HashMap<File, ChecksumPerTarget[]> storage = new HashMap<File, ChecksumPerTarget[]>();
 
-  public InMemoryChecksumStorage(File storePath, BuildTargetsState targetsState) throws IOException {
-    super(storePath, targetsState);
+  public InMemoryChecksumStorage(File storePath, BuildTargetsState targetsState, File projectRootFile) throws IOException {
+    super(storePath, targetsState, projectRootFile);
   }
 
   @Override

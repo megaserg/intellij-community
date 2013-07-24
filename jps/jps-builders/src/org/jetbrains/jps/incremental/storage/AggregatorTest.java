@@ -8,13 +8,15 @@ import java.io.IOException;
  */
 public class AggregatorTest {
   public static void main(String[] args) throws IOException {
-    AbstractAggregator aggregator = new TimestampAggregator();
+    File projectRootFile = new File("C:\\Work\\intellij-community-13");
+
+    AbstractAggregator aggregator = new TimestampAggregator(projectRootFile);
     //AbstractAggregator aggregator = new ChecksumAggregator();
 
     //aggregator.traverse(new File("C:\\Work\\TwinedDeps\\src"));
 
     long start = System.currentTimeMillis();
-    aggregator.traverse(new File("C:\\Work\\intellij-community-13"));
+    aggregator.traverse(projectRootFile);
     long finish = System.currentTimeMillis();
 
     System.out.println("Counted: " + aggregator.filesCounted);

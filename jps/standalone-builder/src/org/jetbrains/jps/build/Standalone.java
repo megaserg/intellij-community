@@ -64,6 +64,8 @@ public class Standalone {
   @Argument(value = "i", description = "Build incrementally")
   public boolean incremental;
 
+  private static File myProjectRootFile;
+
   public static void main(String[] args) {
     Standalone instance = new Standalone();
     List<String> projectPaths;
@@ -84,6 +86,7 @@ public class Standalone {
       printUsageAndExit();
     }
 
+    myProjectRootFile = new File(projectPaths.get(0));
     instance.loadAndRunBuild(projectPaths.get(0));
     System.exit(0);
   }
@@ -171,7 +174,7 @@ public class Standalone {
       scopes.add(TargetTypeBuildScope.newBuilder().setTypeId(ArtifactBuildTargetType.INSTANCE.getTypeId()).setForceBuild(forceBuild).addAllTargetId(artifactsList).build());
     }
 
-    final BuildRunner buildRunner = new BuildRunner(loader, Collections.<String>emptyList(), Collections.<String, String>emptyMap());
+    final BuildRunner buildRunner = new BuildRunner(loader, Collections.<String>emptyList(), Collections.<String, String>emptyMap(), myProjectRootFile);
     ProjectDescriptor descriptor = buildRunner.load(messageHandler, dataStorageRoot, new BuildFSState(true));
     try {
       buildRunner.runBuild(descriptor, CanceledStatus.NULL, null, messageHandler, BuildType.BUILD, scopes, true);

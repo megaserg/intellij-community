@@ -130,7 +130,7 @@ public class BuildTargetConfiguration {
     return out.toString();
   }
 
-  public void storeNonexistentOutputRoots(CompileContext context) throws IOException {
+  public void storeNonexistentOutputRoots(CompileContext context, File projectRootFile) throws IOException {
     Collection<File> outputRoots = myTarget.getOutputRoots(context);
     List<String> nonexistentOutputRoots = new SmartList<String>();
     for (File root : outputRoots) {
@@ -143,11 +143,16 @@ public class BuildTargetConfiguration {
       file.delete();
     }
     else {
-      FileUtil.writeToFile(file, StringUtil.join(nonexistentOutputRoots, "\n"));
+      List<String> relativePaths = new SmartList<String>();
+      for (String absolutePath : nonexistentOutputRoots) {
+        String relativePath = FileUtil.getRelativePath(projectRootFile, new File(absolutePath));
+        relativePaths.add(relativePath);
+      }
+      FileUtil.writeToFile(file, StringUtil.join(relativePaths, "\n"));
     }
   }
 
-  public boolean outputRootWasDeleted(CompileContext context) throws IOException {
+  public boolean outputRootWasDeleted(CompileContext context, File projectRootFile) throws IOException {
     List<String> nonexistentOutputRoots = new SmartList<String>();
 
     final Collection<File> targetRoots = myTarget.getOutputRoots(context);
@@ -181,8 +186,12 @@ public class BuildTargetConfiguration {
       storedNonExistentOutputs = Collections.emptySet();
     }
     else {
-      List<String> lines = StringUtil.split(FileUtil.loadFile(file), "\n");
-      storedNonExistentOutputs = new THashSet<String>(lines, FileUtil.PATH_HASHING_STRATEGY);
+      List<String> relativePaths = StringUtil.split(FileUtil.loadFile(file), "\n");
+      List<String> absolutePaths = new SmartList<String>();
+      for (String relativePath : relativePaths) {
+        absolutePaths.add(FileUtil.join(projectRootFile.getAbsolutePath(), relativePath));
+      }
+      storedNonExistentOutputs = new THashSet<String>(absolutePaths, FileUtil.PATH_HASHING_STRATEGY);
     }
     return !storedNonExistentOutputs.containsAll(nonexistentOutputRoots);
   }

@@ -45,7 +45,7 @@ public class BuildOperations {
   private BuildOperations() {
   }
 
-  public static void ensureFSStateInitialized(CompileContext context, BuildTarget<?> target) throws IOException {
+  public static void ensureFSStateInitialized(CompileContext context, BuildTarget<?> target, File projectRootFile) throws IOException {
     final ProjectDescriptor pd = context.getProjectDescriptor();
     final Timestamps timestamps = pd.timestamps.getStorage();
     final Checksums checksums = pd.checksums.getStorage();
@@ -55,7 +55,7 @@ public class BuildOperations {
       pd.fsState.markInitialScanPerformed(target);
       configuration.save(context);
     }
-    else if (context.getScope().isBuildForced(target) || configuration.isTargetDirty(context) || configuration.outputRootWasDeleted(context)) {
+    else if (context.getScope().isBuildForced(target) || configuration.isTargetDirty(context) || configuration.outputRootWasDeleted(context, projectRootFile)) {
       initTargetFSState(context, target, true);
       IncProjectBuilder.clearOutputFiles(context, target);
       pd.dataManager.cleanTargetStorages(target);
@@ -106,11 +106,11 @@ public class BuildOperations {
     }
   }
 
-  public static void markTargetsUpToDate(CompileContext context, BuildTargetChunk chunk) throws IOException {
+  public static void markTargetsUpToDate(CompileContext context, BuildTargetChunk chunk, File projectRootFile) throws IOException {
     final ProjectDescriptor pd = context.getProjectDescriptor();
     final BuildFSState fsState = pd.fsState;
     for (BuildTarget<?> target : chunk.getTargets()) {
-      pd.getTargetsState().getTargetConfiguration(target).storeNonexistentOutputRoots(context);
+      pd.getTargetsState().getTargetConfiguration(target).storeNonexistentOutputRoots(context, projectRootFile);
     }
     if (!Utils.errorsDetected(context) && !context.getCancelStatus().isCanceled()) {
       boolean marked = dropRemovedPaths(context, chunk);

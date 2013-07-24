@@ -29,9 +29,9 @@ import java.util.Random;
 public class TimestampAggregator extends AbstractAggregator {
   ProjectTimestamps myTimestamps;
 
-  public TimestampAggregator() throws IOException {
+  public TimestampAggregator(File projectRootFile) throws IOException {
     super();
-    myTimestamps = new ProjectTimestamps(myDataStorageRoot, myTargetsState);
+    myTimestamps = new ProjectTimestamps(myDataStorageRoot, myTargetsState, projectRootFile);
   }
 
   @Override

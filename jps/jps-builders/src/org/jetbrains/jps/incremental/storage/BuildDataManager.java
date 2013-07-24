@@ -52,7 +52,9 @@ public class BuildDataManager implements StorageOwner {
   private final ConcurrentMap<BuildTarget<?>, AtomicNotNullLazyValue<BuildTargetStorages>> myTargetStorages =
     new ConcurrentHashMap<BuildTarget<?>, AtomicNotNullLazyValue<BuildTargetStorages>>(16, 0.75f, CONCURRENCY_LEVEL);
 
-  private final OneToManyPathsMapping mySrcToFormMap;
+  private final File myProjectRootFile;
+
+  private final OneToManyRelativePathsMapping mySrcToFormMap;
   private final Mappings myMappings;
   private final BuildDataPaths myDataPaths;
   private final BuildTargetsState myTargetsState;
@@ -98,7 +100,7 @@ public class BuildDataManager implements StorageOwner {
         @Override
         protected SourceToOutputMappingImpl compute() {
           try {
-            return new SourceToOutputMappingImpl(new File(getSourceToOutputMapRoot(key), "data"));
+            return new SourceToOutputMappingImpl(new File(getSourceToOutputMapRoot(key), "data"), myProjectRootFile);
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -115,17 +117,18 @@ public class BuildDataManager implements StorageOwner {
         @NotNull
         @Override
         protected BuildTargetStorages compute() {
-          return new BuildTargetStorages(target, myDataPaths);
+          return new BuildTargetStorages(target, myDataPaths, myProjectRootFile);
         }
       };
     }
   };
 
-  public BuildDataManager(final BuildDataPaths dataPaths, BuildTargetsState targetsState, final boolean useMemoryTempCaches) throws IOException {
+  public BuildDataManager(final BuildDataPaths dataPaths, BuildTargetsState targetsState, final boolean useMemoryTempCaches, File projectRootFile) throws IOException {
     myDataPaths = dataPaths;
     myTargetsState = targetsState;
-    mySrcToFormMap = new OneToManyPathsMapping(new File(getSourceToFormsRoot(), "data"));
-    myMappings = new Mappings(getMappingsRoot(), useMemoryTempCaches);
+    myProjectRootFile = projectRootFile;
+    mySrcToFormMap = new OneToManyRelativePathsMapping(new File(getSourceToFormsRoot(), "data"), projectRootFile);
+    myMappings = new Mappings(getMappingsRoot(), useMemoryTempCaches, projectRootFile);
     myVersionFile = new File(myDataPaths.getDataStorageRoot(), "version.dat");
   }
 
@@ -139,7 +142,7 @@ public class BuildDataManager implements StorageOwner {
     return storages.getOrCreateStorage(provider);
   }
 
-  public OneToManyPathsMapping getSourceToFormMap() {
+  public OneToManyRelativePathsMapping getSourceToFormMap() {
     return mySrcToFormMap;
   }
 

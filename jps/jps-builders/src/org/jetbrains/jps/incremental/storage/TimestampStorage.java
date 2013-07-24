@@ -32,8 +32,8 @@ import java.io.IOException;
 public class TimestampStorage extends AbstractStateStorage<File, TimestampStorage.TimestampPerTarget[]> implements Timestamps {
   private final BuildTargetsState myTargetsState;
 
-  public TimestampStorage(File storePath, BuildTargetsState targetsState) throws IOException {
-    super(storePath, new FileKeyDescriptor(), new StateExternalizer());
+  public TimestampStorage(File storePath, BuildTargetsState targetsState, File projectRootFile) throws IOException {
+    super(storePath, new RelativeFileKeyDescriptor(projectRootFile), new StateExternalizer());
     myTargetsState = targetsState;
   }
 

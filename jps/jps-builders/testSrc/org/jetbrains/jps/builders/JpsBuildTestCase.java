@@ -187,9 +187,9 @@ public abstract class JpsBuildTestCase extends UsefulTestCase {
       BuildDataPaths dataPaths = new BuildDataPathsImpl(myDataStorageRoot);
       BuildRootIndexImpl buildRootIndex = new BuildRootIndexImpl(targetIndex, myModel, index, dataPaths, ignoredFileIndex);
       BuildTargetsState targetsState = new BuildTargetsState(dataPaths, myModel, buildRootIndex);
-      ProjectTimestamps timestamps = new ProjectTimestamps(myDataStorageRoot, targetsState);
-      ProjectChecksums checksums = new ProjectChecksums(myDataStorageRoot, targetsState);
-      BuildDataManager dataManager = new BuildDataManager(dataPaths, targetsState, true);
+      ProjectTimestamps timestamps = new ProjectTimestamps(myDataStorageRoot, targetsState, null); // TODO(serebryakov): fix
+      ProjectChecksums checksums = new ProjectChecksums(myDataStorageRoot, targetsState, null); // TODO(serebryakov): fix
+      BuildDataManager dataManager = new BuildDataManager(dataPaths, targetsState, true, null); // TODO(serebryakov): fix
       return new ProjectDescriptor(myModel, new BuildFSState(true), timestamps, checksums, dataManager, buildLoggingManager, index,
                                    targetsState, targetIndex, buildRootIndex, ignoredFileIndex);
     }
@@ -292,7 +292,7 @@ public abstract class JpsBuildTestCase extends UsefulTestCase {
   }
 
   protected BuildResult doBuild(final ProjectDescriptor descriptor, CompileScopeTestBuilder scopeBuilder) {
-    IncProjectBuilder builder = new IncProjectBuilder(descriptor, BuilderRegistry.getInstance(), myBuildParams, CanceledStatus.NULL, null, true);
+    IncProjectBuilder builder = new IncProjectBuilder(descriptor, BuilderRegistry.getInstance(), myBuildParams, CanceledStatus.NULL, null, true, null); // TODO(serebryakov): fix
     BuildResult result = new BuildResult();
     builder.addMessageHandler(result);
     try {

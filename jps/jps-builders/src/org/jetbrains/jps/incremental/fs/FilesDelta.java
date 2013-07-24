@@ -19,6 +19,8 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.util.io.IOUtil;
 import gnu.trove.THashSet;
+import gnu.trove.set.hash.TCustomHashSet;
+import gnu.trove.set.hash.TLinkedHashSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.builders.BuildRootDescriptor;
@@ -30,10 +32,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /** @noinspection SynchronizationOnLocalVariableOrMethodParameter*/
 final class FilesDelta {
@@ -78,6 +77,8 @@ final class FilesDelta {
         files = myFilesToRecompile.get(descriptor);
         if (files == null) {
           files = new THashSet<File>(FileUtil.FILE_HASHING_STRATEGY);
+          //TLink
+          files = new TCustomHashSet<File>(\)HashSet<File>(FileUtil.FILE_HASHING_STRATEGY);
           myFilesToRecompile.put(descriptor, files);
         }
       }

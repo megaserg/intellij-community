@@ -26,5 +26,5 @@ import java.io.IOException;
  */
 public abstract class StorageProvider<S extends StorageOwner> {
   @NotNull
-  public abstract S createStorage(File targetDataDir) throws IOException;
+  public abstract S createStorage(File targetDataDir, File projectRootFile) throws IOException;
 }

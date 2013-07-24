@@ -33,7 +33,7 @@ public class ArtifactOutToSourceStorageProvider extends StorageProvider<Artifact
 
   @NotNull
   @Override
-  public ArtifactOutputToSourceMapping createStorage(File targetDataDir) throws IOException {
-    return new ArtifactOutputToSourceMapping(new File(targetDataDir, "out-src" + File.separator + "data"));
+  public ArtifactOutputToSourceMapping createStorage(File targetDataDir, File projectRootFile) throws IOException {
+    return new ArtifactOutputToSourceMapping(new File(targetDataDir, "out-src" + File.separator + "data"), projectRootFile);
   }
 }

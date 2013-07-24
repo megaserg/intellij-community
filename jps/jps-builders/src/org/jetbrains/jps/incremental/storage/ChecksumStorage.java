@@ -23,8 +23,8 @@ public class ChecksumStorage extends AbstractStateStorage<File, ChecksumStorage.
    */
   private final BuildTargetsState myTargetsState;
 
-  public ChecksumStorage(File storePath, BuildTargetsState targetsState) throws IOException {
-    super(storePath, new FileKeyDescriptor(), new ChecksumStateExternalizer());
+  public ChecksumStorage(File storePath, BuildTargetsState targetsState, File projectRootFile) throws IOException {
+    super(storePath, new RelativeFileKeyDescriptor(projectRootFile), new ChecksumStateExternalizer());
     myTargetsState = targetsState;
   }
 

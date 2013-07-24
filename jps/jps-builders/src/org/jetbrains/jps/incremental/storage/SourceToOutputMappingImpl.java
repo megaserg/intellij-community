@@ -29,10 +29,10 @@ import java.util.Iterator;
  *         Date: 10/11/12
  */
 public class SourceToOutputMappingImpl implements SourceToOutputMapping {
-  private final OneToManyPathsMapping myMapping;
+  private final OneToManyRelativePathsMapping myMapping;
 
-  public SourceToOutputMappingImpl(File storePath) throws IOException {
-    myMapping = new OneToManyPathsMapping(storePath);
+  public SourceToOutputMappingImpl(File storePath, File projectRootFile) throws IOException {
+    myMapping = new OneToManyRelativePathsMapping(storePath, projectRootFile);
   }
 
   @Override

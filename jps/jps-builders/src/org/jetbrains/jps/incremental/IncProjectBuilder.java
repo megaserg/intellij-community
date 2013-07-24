@@ -52,6 +52,7 @@ import org.jetbrains.jps.incremental.java.ExternalJavacDescriptor;
 import org.jetbrains.jps.incremental.messages.*;
 import org.jetbrains.jps.incremental.storage.BuildTargetConfiguration;
 import org.jetbrains.jps.incremental.storage.OneToManyPathsMapping;
+import org.jetbrains.jps.incremental.storage.OneToManyRelativePathsMapping;
 import org.jetbrains.jps.indices.ModuleExcludeIndex;
 import org.jetbrains.jps.model.java.JpsJavaExtensionService;
 import org.jetbrains.jps.model.java.compiler.JpsJavaCompilerConfiguration;
@@ -112,8 +113,10 @@ public class IncProjectBuilder {
   private final int myTotalModuleLevelBuilderCount;
   private final List<Future> myAsyncTasks = Collections.synchronizedList(new ArrayList<Future>());
 
+  private final File myProjectRootFile;
+
   public IncProjectBuilder(ProjectDescriptor pd, BuilderRegistry builderRegistry, Map<String, String> builderParams, CanceledStatus cs,
-                           @Nullable Callbacks.ConstantAffectionResolver constantSearch, final boolean isTestMode) {
+                           @Nullable Callbacks.ConstantAffectionResolver constantSearch, final boolean isTestMode, File projectRootFile) {
     myProjectDescriptor = pd;
     myBuilderRegistry = builderRegistry;
     myBuilderParams = builderParams;
@@ -122,6 +125,7 @@ public class IncProjectBuilder {
     myTotalTargetsWork = pd.getBuildTargetIndex().getAllTargets().size();
     myTotalModuleLevelBuilderCount = builderRegistry.getModuleLevelBuilderCount();
     myIsTestMode = isTestMode;
+    myProjectRootFile = projectRootFile;
   }
 
   public void addMessageHandler(MessageHandler handler) {
@@ -135,7 +139,7 @@ public class IncProjectBuilder {
       final BuildFSState fsState = myProjectDescriptor.fsState;
       for (BuildTarget<?> target : myProjectDescriptor.getBuildTargetIndex().getAllTargets()) {
         if (scope.isAffected(target)) {
-          BuildOperations.ensureFSStateInitialized(context, target);
+          BuildOperations.ensureFSStateInitialized(context, target, myProjectRootFile);
           final Map<BuildRootDescriptor, Set<File>> toRecompile = fsState.getSourcesToRecompile(context, target);
           //noinspection SynchronizationOnLocalVariableOrMethodParameter
           synchronized (toRecompile) {
@@ -822,7 +826,7 @@ public class IncProjectBuilder {
       Utils.ERRORS_DETECTED_KEY.set(context, Boolean.FALSE);
 
       for (BuildTarget<?> target : chunk.getTargets()) {
-        BuildOperations.ensureFSStateInitialized(context, target);
+        BuildOperations.ensureFSStateInitialized(context, target, myProjectRootFile);
       }
 
       doneSomething = processDeletedPaths(context, chunk.getTargets());
@@ -831,7 +835,7 @@ public class IncProjectBuilder {
 
       doneSomething |= runBuildersForChunk(context, chunk);
 
-      onChunkBuildComplete(context, chunk);
+      onChunkBuildComplete(context, chunk, myProjectRootFile);
 
       //if (doneSomething && GENERATE_CLASSPATH_INDEX) {
       //  myAsyncTasks.add(SharedThreadPool.getInstance().executeOnPooledThread(new Runnable() {
@@ -976,7 +980,7 @@ public class IncProjectBuilder {
 
           if (target instanceof ModuleBuildTarget) {
             // check if deleted source was associated with a form
-            final OneToManyPathsMapping sourceToFormMap = context.getProjectDescriptor().dataManager.getSourceToFormMap();
+            final OneToManyRelativePathsMapping sourceToFormMap = context.getProjectDescriptor().dataManager.getSourceToFormMap();
             final Collection<String> boundForms = sourceToFormMap.getState(deletedSource);
             if (boundForms != null) {
               for (String formPath : boundForms) {
@@ -1142,13 +1146,13 @@ public class IncProjectBuilder {
     }
   }
 
-  private static void onChunkBuildComplete(CompileContext context, @NotNull BuildTargetChunk chunk) throws IOException {
+  private static void onChunkBuildComplete(CompileContext context, @NotNull BuildTargetChunk chunk, File projectRootFile) throws IOException {
     final ProjectDescriptor pd = context.getProjectDescriptor();
     final BuildFSState fsState = pd.fsState;
     fsState.clearContextRoundData(context);
     fsState.clearContextChunk(context);
 
-    BuildOperations.markTargetsUpToDate(context, chunk);
+    BuildOperations.markTargetsUpToDate(context, chunk, projectRootFile);
   }
 
   private static CompileContext createContextWrapper(final CompileContext delegate) {

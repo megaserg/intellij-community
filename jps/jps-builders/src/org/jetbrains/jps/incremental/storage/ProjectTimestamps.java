@@ -31,9 +31,9 @@ public class ProjectTimestamps {
   private final TimestampStorage myTimestamps;
   private final File myTimestampsRoot;
 
-  public ProjectTimestamps(final File dataStorageRoot, BuildTargetsState targetsState) throws IOException {
+  public ProjectTimestamps(final File dataStorageRoot, BuildTargetsState targetsState, File projectRootFile) throws IOException {
     myTimestampsRoot = new File(dataStorageRoot, TIMESTAMP_STORAGE);
-    myTimestamps = new TimestampStorage(new File(myTimestampsRoot, "data"), targetsState);
+    myTimestamps = new TimestampStorage(new File(myTimestampsRoot, "data"), targetsState, projectRootFile);
   }
 
   public TimestampStorage getStorage() {

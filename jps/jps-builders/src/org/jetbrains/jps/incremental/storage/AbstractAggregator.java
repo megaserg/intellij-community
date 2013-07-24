@@ -30,6 +30,7 @@ public abstract class AbstractAggregator {
   protected File myDataStorageRoot;
   protected BuildTargetsState myTargetsState;
   protected BuildRootIndexImpl myBuildRootIndex;
+
   public int filesCounted;
 
   public AbstractAggregator() throws IOException {

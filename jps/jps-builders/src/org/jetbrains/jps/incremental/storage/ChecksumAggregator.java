@@ -30,9 +30,9 @@ import java.util.Random;
 public class ChecksumAggregator extends AbstractAggregator {
   ProjectChecksums myChecksums;
 
-  public ChecksumAggregator() throws IOException {
+  public ChecksumAggregator(File projectRootFile) throws IOException {
     super();
-    myChecksums = new ProjectChecksums(myDataStorageRoot, myTargetsState);
+    myChecksums = new ProjectChecksums(myDataStorageRoot, myTargetsState, projectRootFile);
   }
 
   @Override

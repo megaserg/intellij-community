@@ -30,12 +30,12 @@ public class ProjectChecksums {
   private final ChecksumStorage myChecksums;
   private final File myChecksumsRoot;
 
-  public ProjectChecksums(final File dataStorageRoot, BuildTargetsState targetsState) throws IOException {
+  public ProjectChecksums(final File dataStorageRoot, BuildTargetsState targetsState, File projectRootFile) throws IOException {
     myChecksumsRoot = new File(dataStorageRoot, CHECKSUM_STORAGE);
     /*
      * Could be switched to InMemoryChecksumStorage.
      */
-    myChecksums = new ChecksumStorage(new File(myChecksumsRoot, "data"), targetsState);
+    myChecksums = new ChecksumStorage(new File(myChecksumsRoot, "data"), targetsState, projectRootFile);
     //myChecksums = new InMemoryChecksumStorage(new File(myChecksumsRoot, "data"), targetsState);
   }
 

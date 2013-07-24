@@ -25,7 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.asm4.ClassReader;
 import org.jetbrains.asm4.Opcodes;
-import org.jetbrains.jps.incremental.storage.FileKeyDescriptor;
+import org.jetbrains.jps.incremental.storage.RelativeFileKeyDescriptor;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -89,7 +89,9 @@ public class Mappings {
   @Nullable
   private Collection<String> myRemovedFiles;
 
-  private Mappings(final Mappings base) throws IOException {
+  private File myProjectRootFile = null;
+
+  private Mappings(final Mappings base, File projectRootFile) throws IOException {
     myLock = base.myLock;
     myIsDelta = true;
     myChangedClasses = new TIntHashSet(DEFAULT_SET_CAPACITY, DEFAULT_SET_LOAD_FACTOR);
@@ -102,10 +104,11 @@ public class Mappings {
     myEmptyName = myContext.get("");
     myObjectClassName = myContext.get("java/lang/Object");
     myDebugS = base.myDebugS;
+    myProjectRootFile = projectRootFile;
     createImplementation();
   }
 
-  public Mappings(final File rootDir, final boolean transientDelta) throws IOException {
+  public Mappings(final File rootDir, final boolean transientDelta, File projectRootFile) throws IOException {
     myLock = new Object();
     myIsDelta = false;
     myChangedClasses = null;
@@ -113,6 +116,7 @@ public class Mappings {
     myDeletedClasses = null;
     myDeltaIsTransient = transientDelta;
     myRootDir = rootDir;
+    myProjectRootFile = projectRootFile;
     createImplementation();
     myInitName = myContext.get("<init>");
     myEmptyName = myContext.get("");
@@ -141,17 +145,17 @@ public class Mappings {
       myClassToSubclasses = new IntIntPersistentMultiMaplet(DependencyContext.getTableFile(myRootDir, CLASS_TO_SUBCLASSES), INT_KEY_DESCRIPTOR);
       myClassToClassDependency = new IntIntPersistentMultiMaplet(DependencyContext.getTableFile(myRootDir, CLASS_TO_CLASS), INT_KEY_DESCRIPTOR);
       mySourceFileToClasses = new ObjectObjectPersistentMultiMaplet<File, ClassRepr>(
-        DependencyContext.getTableFile(myRootDir, SOURCE_TO_CLASS), new FileKeyDescriptor(), ClassRepr.externalizer(myContext),
+        DependencyContext.getTableFile(myRootDir, SOURCE_TO_CLASS), new RelativeFileKeyDescriptor(myProjectRootFile), ClassRepr.externalizer(myContext),
         ourClassSetConstructor
       );
-      myClassToSourceFile = new IntObjectPersistentMaplet<File>(DependencyContext.getTableFile(myRootDir, CLASS_TO_SOURCE), new FileKeyDescriptor());
+      myClassToSourceFile = new IntObjectPersistentMaplet<File>(DependencyContext.getTableFile(myRootDir, CLASS_TO_SOURCE), new RelativeFileKeyDescriptor(myProjectRootFile));
     }
   }
 
   public Mappings createDelta() {
     synchronized (myLock) {
       try {
-        return new Mappings(this);
+        return new Mappings(this, myProjectRootFile);
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -1769,7 +1773,8 @@ public class Mappings {
         for (ClassRepr c : addedClasses) {
           if (!c.isLocal() && !c.isAnonymous() && isEmpty(c.getOuterClassName())) {
             final File currentlyMappedTo = myClassToSourceFile.get(c.name);
-            if (currentlyMappedTo != null && !FileUtil.filesEqual(currentlyMappedTo, srcFile) && currentlyMappedTo.exists() && myFilter.belongsToCurrentTargetChunk(currentlyMappedTo)) {
+            if (currentlyMappedTo != null && !FileUtil.filesEqual(currentlyMappedTo, srcFile) && currentlyMappedTo.exists() && myFilter.belongsToCurrentTargetChunk(
+              currentlyMappedTo)) {
               // Same classes from different source files.
               // Schedule for recompilation both to make possible 'duplicate sources' error evident
               debug("Scheduling for recompilation duplicated sources: ", currentlyMappedTo.getPath() + "; " + srcFile.getPath());
@@ -2142,7 +2147,8 @@ public class Mappings {
     return new Callbacks.Backend() {
       public void associate(final String classFileName, final String sourceFileName, final ClassReader cr) {
         synchronized (myLock) {
-          final int classFileNameS = myContext.get(classFileName);
+          String relativeClassFileName = FileUtil.getRelativePath(myProjectRootFile, new File(classFileName));
+          final int classFileNameS = myContext.get(relativeClassFileName);
           final Pair<ClassRepr, Set<UsageRepr.Usage>> result = new ClassfileAnalyzer(myContext).analyze(classFileNameS, cr);
           final ClassRepr repr = result.first;
           if (repr != null) {
