@@ -40,14 +40,14 @@ public class AsmCodeGenerator {
   private final ArrayList myErrors;
   private final ArrayList myWarnings;
 
-  private final Map myIdToLocalMap = new HashMap();
+  private final Map myIdToLocalMap = new LinkedHashMap(); // Changed by serebryakov.
 
   private static final String CONSTRUCTOR_NAME = "<init>";
   private String myClassToBind;
   private byte[] myPatchedData;
 
-  private static final Map myContainerLayoutCodeGenerators = new HashMap();
-  private static final Map myComponentLayoutCodeGenerators = new HashMap();
+  private static final Map myContainerLayoutCodeGenerators = new LinkedHashMap(); // Changed by serebryakov.
+  private static final Map myComponentLayoutCodeGenerators = new LinkedHashMap(); // Changed by serebryakov.
   private static final Map myPropertyCodeGenerators = new LinkedHashMap();  // need LinkedHashMap for deterministic iteration
   public static final String SETUP_METHOD_NAME = "$$$setupUI$$$";
   public static final String GET_ROOT_COMPONENT_METHOD_NAME = "$$$getRootComponent$$$";
@@ -228,8 +228,8 @@ public class AsmCodeGenerator {
   class FormClassVisitor extends ClassVisitor {
     private String myClassName;
     private String mySuperName;
-    private final Map myFieldDescMap = new HashMap();
-    private final Map myFieldAccessMap = new HashMap();
+    private final Map myFieldDescMap = new LinkedHashMap(); // Changed by serebryakov.
+    private final Map myFieldAccessMap = new LinkedHashMap(); // Changed by serebryakov.
     private boolean myHaveCreateComponentsMethod = false;
     private int myCreateComponentsAccess;
     private final boolean myExplicitSetupCall;

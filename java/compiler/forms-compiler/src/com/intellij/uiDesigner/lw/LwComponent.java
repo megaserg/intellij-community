@@ -22,6 +22,7 @@ import org.jdom.Element;
 import java.awt.*;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;/**
  * @author Anton Katilin
  * @author Vladimir Kondratyev
@@ -72,10 +73,10 @@ public abstract class LwComponent implements IComponent{
     }
     myBounds = new Rectangle();
     myConstraints = new GridConstraints();
-    myIntrospectedProperty2Value = new HashMap();
+    myIntrospectedProperty2Value = new LinkedHashMap(); // Changed by serebryakov.
     myClassName = className;
-    myClientProperties = new HashMap();
-    myDelegeeClientProperties = new HashMap();
+    myClientProperties = new LinkedHashMap(); // Changed by serebryakov.
+    myDelegeeClientProperties = new LinkedHashMap(); // Changed by serebryakov.
   }
 
   public final String getId() {

@@ -24,6 +24,7 @@ import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 /**
  * @author Anton Katilin
@@ -38,7 +39,7 @@ public final class CompiledClassPropertiesProvider implements PropertiesProvider
       throw new IllegalArgumentException("loader cannot be null");
     }
     myLoader = loader;
-    myCache = new HashMap();
+    myCache = new LinkedHashMap(); // Changed by serebryakov.
   }
 
   public HashMap getLwProperties(final String className) {
@@ -66,7 +67,7 @@ public final class CompiledClassPropertiesProvider implements PropertiesProvider
       return null;
     }
 
-    final HashMap result = new HashMap();
+    final HashMap result = new LinkedHashMap(); // Changed by serebryakov.
     final PropertyDescriptor[] descriptors = beanInfo.getPropertyDescriptors();
     for (int i = 0; i < descriptors.length; i++) {
       final PropertyDescriptor descriptor = descriptors[i];

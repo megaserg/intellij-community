@@ -32,6 +32,7 @@ import org.jetbrains.jps.incremental.*;
 import org.jetbrains.jps.incremental.java.CopyResourcesUtil;
 import org.jetbrains.jps.incremental.java.FormsParsing;
 import org.jetbrains.jps.incremental.storage.OneToManyPathsMapping;
+import org.jetbrains.jps.incremental.storage.OneToManyRelativePathsMapping;
 import org.jetbrains.jps.model.JpsProject;
 import org.jetbrains.jps.model.java.JpsJavaExtensionService;
 import org.jetbrains.jps.model.java.compiler.JpsCompilerExcludes;
@@ -146,7 +147,7 @@ public class FormsBindingManager extends FormsBuilder {
       }
 
       // form should be considered dirty if the class it is bound to is dirty
-      final OneToManyPathsMapping sourceToFormMap = context.getProjectDescriptor().dataManager.getSourceToFormMap();
+      final OneToManyRelativePathsMapping sourceToFormMap = context.getProjectDescriptor().dataManager.getSourceToFormMap();
       for (Map.Entry<File, ModuleBuildTarget> entry : filesToCompile.entrySet()) {
         final File srcFile = entry.getKey();
         final ModuleBuildTarget target = entry.getValue();

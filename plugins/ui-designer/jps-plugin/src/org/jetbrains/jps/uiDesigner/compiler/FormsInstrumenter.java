@@ -41,6 +41,7 @@ import org.jetbrains.jps.incremental.messages.BuildMessage;
 import org.jetbrains.jps.incremental.messages.CompilerMessage;
 import org.jetbrains.jps.incremental.messages.ProgressMessage;
 import org.jetbrains.jps.incremental.storage.OneToManyPathsMapping;
+import org.jetbrains.jps.incremental.storage.OneToManyRelativePathsMapping;
 import org.jetbrains.jps.model.JpsProject;
 import org.jetbrains.jps.uiDesigner.model.JpsUiDesignerConfiguration;
 import org.jetbrains.jps.uiDesigner.model.JpsUiDesignerExtensionService;
@@ -100,7 +101,7 @@ public class FormsInstrumenter extends FormsBuilder {
       try {
         final Map<File, Collection<File>> processed = instrumentForms(context, chunk, chunkSourcePath, finder, formsToCompile, outputConsumer);
 
-        final OneToManyPathsMapping sourceToFormMap = context.getProjectDescriptor().dataManager.getSourceToFormMap();
+        final OneToManyRelativePathsMapping sourceToFormMap = context.getProjectDescriptor().dataManager.getSourceToFormMap();
 
         for (Map.Entry<File, Collection<File>> entry : processed.entrySet()) {
           final File src = entry.getKey();
