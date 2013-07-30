@@ -36,7 +36,7 @@ import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.JarFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.util.BooleanFunction;
-import com.intellij.util.Function;
+import com.intellij.util.NullableFunction;
 import com.intellij.util.PathUtil;
 import com.intellij.util.PathsList;
 import com.intellij.util.containers.ContainerUtilRt;
@@ -103,7 +103,7 @@ public class ExternalSystemApiUtil {
     }
   };
 
-  @NotNull private static final Function<DataNode<?>, Key<?>> GROUPER = new Function<DataNode<?>, Key<?>>() {
+  @NotNull private static final NullableFunction<DataNode<?>, Key<?>> GROUPER = new NullableFunction<DataNode<?>, Key<?>>() {
     @Override
     public Key<?> fun(DataNode<?> node) {
       return node.getKey();
@@ -184,7 +184,9 @@ public class ExternalSystemApiUtil {
    */
   @NotNull
   public static String toCanonicalPath(@NotNull String path) {
-    return PathUtil.getCanonicalPath(normalizePath(new File(path).getAbsolutePath()));
+    String p = normalizePath(new File(path).getAbsolutePath());
+    assert p != null;
+    return PathUtil.getCanonicalPath(p);
   }
 
   @NotNull
@@ -214,7 +216,7 @@ public class ExternalSystemApiUtil {
 
   @NotNull
   public static <K, V> Map<DataNode<K>, List<DataNode<V>>> groupBy(@NotNull Collection<DataNode<V>> nodes, @NotNull final Key<K> key) {
-    return groupBy(nodes, new Function<DataNode<V>, DataNode<K>>() {
+    return groupBy(nodes, new NullableFunction<DataNode<V>, DataNode<K>>() {
       @Nullable
       @Override
       public DataNode<K> fun(DataNode<V> node) {
@@ -224,7 +226,7 @@ public class ExternalSystemApiUtil {
   }
 
   @NotNull
-  public static <K, V> Map<K, List<V>> groupBy(@NotNull Collection<V> nodes, @NotNull Function<V, K> grouper) {
+  public static <K, V> Map<K, List<V>> groupBy(@NotNull Collection<V> nodes, @NotNull NullableFunction<V, K> grouper) {
     Map<K, List<V>> result = ContainerUtilRt.newHashMap();
     for (V data : nodes) {
       K key = grouper.fun(data);
@@ -363,7 +365,8 @@ public class ExternalSystemApiUtil {
   }
 
   @SuppressWarnings("ConstantConditions")
-  public static String normalizePath(String s) {
+  @Nullable
+  public static String normalizePath(@Nullable String s) {
     return StringUtil.isEmpty(s) ? null : s.replace('\\', ExternalSystemConstants.PATH_SEPARATOR);
   }
 

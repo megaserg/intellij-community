@@ -302,6 +302,7 @@ public class JavaMethodsConflictResolver implements PsiConflictResolver{
               final PsiType returnType = eSubstitutor.substitute(existingMethod.getReturnType());
               final PsiType returnType1 = cSubstitutor.substitute(method.getReturnType());
               if (returnType != null && returnType1 != null && !returnType1.equals(returnType) && TypeConversionUtil.isAssignable(returnType, returnType1, false)) {
+                if (class1.isInterface() && !existingClass.isInterface()) continue;
                 conflicts.remove(existing);
               } else {
                 conflicts.remove(i);
@@ -625,6 +626,8 @@ public class JavaMethodsConflictResolver implements PsiConflictResolver{
   }
 
   private static Specifics chooseHigherDimension(PsiType type1, PsiType type2) {
+    if (type1 != null && type1.equalsToText(CommonClassNames.JAVA_LANG_OBJECT)) return null;
+    if (type2 != null && type2.equalsToText(CommonClassNames.JAVA_LANG_OBJECT)) return null;
     int d1 = type1 != null ? type1.getArrayDimensions() : 0;
     int d2 = type2 != null ? type2.getArrayDimensions() : 0;
     if (d1 > d2) {

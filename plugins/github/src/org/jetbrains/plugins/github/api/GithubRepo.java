@@ -1,0 +1,102 @@
+/*
+ * Copyright 2000-2013 JetBrains s.r.o.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.jetbrains.plugins.github.api;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * @author Aleksey Pivovarov
+ */
+public class GithubRepo {
+  @NotNull private String myName;
+  @NotNull private String myFullName;
+  @NotNull private String myDescription;
+
+  private boolean myIsPrivate;
+  private boolean myIsFork;
+
+  @NotNull private String myHtmlUrl;
+  @NotNull private String myCloneUrl;
+
+  @Nullable private String myDefaultBranch;
+
+  @NotNull private GithubUser myOwner;
+
+  public GithubRepo(@NotNull String name,
+                    @NotNull String fullName,
+                    @NotNull String description,
+                    boolean isPrivate,
+                    boolean isFork,
+                    @NotNull String htmlUrl,
+                    @NotNull String cloneUrl,
+                    @Nullable String defaultBranch,
+                    @NotNull GithubUser owner) {
+    myName = name;
+    myFullName = fullName;
+    myDescription = description;
+    myIsPrivate = isPrivate;
+    myIsFork = isFork;
+    myHtmlUrl = htmlUrl;
+    myCloneUrl = cloneUrl;
+    myDefaultBranch = defaultBranch;
+    myOwner = owner;
+  }
+
+  @NotNull
+  public String getName() {
+    return myName;
+  }
+
+  @NotNull
+  public String getFullName() {
+    return myFullName;
+  }
+
+  @NotNull
+  public String getDescription() {
+    return myDescription;
+  }
+
+  public boolean isPrivate() {
+    return myIsPrivate;
+  }
+
+  public boolean isFork() {
+    return myIsFork;
+  }
+
+  @NotNull
+  public String getHtmlUrl() {
+    return myHtmlUrl;
+  }
+
+  @NotNull
+  public String getCloneUrl() {
+    return myCloneUrl;
+  }
+
+  @Nullable
+  public String getDefaultBranch() {
+    return myDefaultBranch;
+  }
+
+  @NotNull
+  public GithubUser getOwner() {
+    return myOwner;
+  }
+}
+

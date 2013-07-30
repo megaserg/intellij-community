@@ -149,7 +149,7 @@ public class GotoTaskAction extends GotoActionBase implements DumbAware {
           Task task = ((TaskPsiElement)element).getTask();
           LocalTask localTask = taskManager.findTask(task.getId());
           if (localTask != null) {
-            taskManager.activateTask(localTask, !shiftPressed.get(), false);
+            taskManager.activateTask(localTask, !shiftPressed.get());
           }
           else {
             showOpenTaskDialog(project, task);
@@ -167,7 +167,7 @@ public class GotoTaskAction extends GotoActionBase implements DumbAware {
     SwingUtilities.invokeLater(new Runnable() {
       @Override
       public void run() {
-        new SimpleOpenTaskDialog(project, task).show();
+        new OpenTaskDialog(project, task).show();
       }
     });
   }

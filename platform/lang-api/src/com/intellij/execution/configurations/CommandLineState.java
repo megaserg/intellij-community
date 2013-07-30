@@ -17,7 +17,9 @@ package com.intellij.execution.configurations;
 
 import com.intellij.execution.*;
 import com.intellij.execution.executors.DefaultRunExecutor;
+import com.intellij.execution.filters.Filter;
 import com.intellij.execution.filters.TextConsoleBuilder;
+import com.intellij.execution.filters.TextConsoleBuilderFactory;
 import com.intellij.execution.process.ProcessHandler;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.runners.ProgramRunner;
@@ -41,25 +43,26 @@ public abstract class CommandLineState implements RunProfileState {
 
   protected CommandLineState(ExecutionEnvironment environment) {
     myEnvironment = environment;
+    myConsoleBuilder = myEnvironment != null ? TextConsoleBuilderFactory.getInstance().createBuilder(myEnvironment.getProject()) : null;
   }
 
   public ExecutionEnvironment getEnvironment() {
     return myEnvironment;
   }
 
-  @Override
   public RunnerSettings getRunnerSettings() {
     return myEnvironment.getRunnerSettings();
-  }
-
-  @Override
-  public ConfigurationPerRunnerSettings getConfigurationSettings() {
-    return myEnvironment.getConfigurationSettings();
   }
 
   @NotNull
   public ExecutionTarget getExecutionTarget() {
     return myEnvironment.getExecutionTarget();
+  }
+
+  public void addConsoleFilters(Filter... filters) {
+    for (Filter filter : filters) {
+      myConsoleBuilder.addFilter(filter);
+    }
   }
 
   @Override

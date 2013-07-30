@@ -76,6 +76,10 @@ class FileElementInfo implements SmartPointerElementInfo {
     if (other instanceof FileElementInfo) {
       return Comparing.equal(myVirtualFile, ((FileElementInfo)other).myVirtualFile);
     }
+    if (other instanceof SelfElementInfo && ((SelfElementInfo)other).getSyncStartOffset() != 0) {
+      // SelfElementInfo need psi (parsing) for element restoration and apriori could not reference psi file
+      return false;
+    }
     return Comparing.equal(restoreElement(), other.restoreElement());
   }
 
@@ -93,5 +97,10 @@ class FileElementInfo implements SmartPointerElementInfo {
   @Override
   public Project getProject() {
     return myProject;
+  }
+
+  @Override
+  public void cleanup() {
+
   }
 }

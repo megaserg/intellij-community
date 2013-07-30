@@ -63,6 +63,7 @@ public class DeployToServerRunConfiguration<C extends ServerConfiguration> exten
     return myDeployer;
   }
 
+  @NotNull
   @Override
   public SettingsEditor<DeployToServerRunConfiguration> getConfigurationEditor() {
     return new DeployToServerSettingsEditor(myServerType, myDeployer, getProject());
@@ -85,7 +86,7 @@ public class DeployToServerRunConfiguration<C extends ServerConfiguration> exten
       throw new ExecutionException("Deployment is not selected");
     }
 
-    return new DeployToServerState(env, myDeployer, server, myDeploymentSource);
+    return new DeployToServerState(myDeployer, server, myDeploymentSource);
   }
 
   @Override

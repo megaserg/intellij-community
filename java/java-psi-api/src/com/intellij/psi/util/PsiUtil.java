@@ -1015,10 +1015,28 @@ public final class PsiUtil extends PsiUtilCore {
 
   public static void ensureValidType(@NotNull PsiType type) {
     if (!type.isValid()) {
+      Thread.yield();
+      if (type.isValid()) {
+        LOG.error("PsiType resurrected: " + type + " of " + type.getClass());
+        return;
+      }
       if (type instanceof PsiClassType) {
         ((PsiClassType)type).resolve(); // should throw exception
       }
       throw new AssertionError("Invalid type: " + type + " of class " + type.getClass());
     }
+  }
+
+  @Nullable
+  public static String getMemberQualifiedName(PsiMember member) {
+    if (member instanceof PsiClass) {
+      return ((PsiClass)member).getQualifiedName();
+    }
+
+    PsiClass containingClass = member.getContainingClass();
+    if (containingClass == null) return null;
+    String className = containingClass.getQualifiedName();
+    if (className == null) return null;
+    return className + "." + member.getName();
   }
 }

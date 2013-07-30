@@ -16,13 +16,15 @@
 package org.jetbrains.plugins.github;
 
 import com.intellij.openapi.ui.DialogWrapper;
-import com.intellij.openapi.vcs.VcsException;
+import com.intellij.openapi.util.Clock;
+import com.intellij.util.text.DateFormatUtil;
 import git4idea.GitUtil;
-import git4idea.config.GitConfigUtil;
 import git4idea.repo.GitRepository;
 import git4idea.repo.GitRepositoryManager;
 import git4idea.test.GitExecutor;
 import git4idea.test.TestDialogHandler;
+import org.jetbrains.plugins.github.api.GithubApiUtil;
+import org.jetbrains.plugins.github.api.GithubRepoDetailed;
 import org.jetbrains.plugins.github.test.GithubTest;
 import org.jetbrains.plugins.github.ui.GithubShareDialog;
 
@@ -42,7 +44,8 @@ public abstract class GithubShareProjectTestBase extends GithubTest {
 
     myGitRepositoryManager = GitUtil.getRepositoryManager(myProject);
     Random rnd = new Random();
-    PROJECT_NAME = "new_project_from_share_test_" + rnd.nextLong();
+    long time = Clock.getTime();
+    PROJECT_NAME = "new_project_from_" + getTestName(false) + "_" + DateFormatUtil.formatDate(time).replace('/', '-') + "_" + rnd.nextLong();
     registerHttpAuthService();
   }
 
@@ -57,7 +60,7 @@ public abstract class GithubShareProjectTestBase extends GithubTest {
   }
 
   protected void deleteGithubRepo() throws IOException {
-    GithubUtil.deleteGithubRepository(myGitHubSettings.getAuthData(), PROJECT_NAME);
+    GithubApiUtil.deleteGithubRepository(myGitHubSettings.getAuthData(), myLogin1, PROJECT_NAME);
   }
 
   protected void registerDefaultShareDialogHandler() {
@@ -86,7 +89,7 @@ public abstract class GithubShareProjectTestBase extends GithubTest {
 
   protected void checkGithubExists() throws IOException {
     GithubAuthData auth = myGitHubSettings.getAuthData();
-    RepositoryInfo githubInfo = GithubUtil.getDetailedRepoInfo(auth, auth.getLogin(), PROJECT_NAME);
+    GithubRepoDetailed githubInfo = GithubApiUtil.getDetailedRepoInfo(auth, myLogin1, PROJECT_NAME);
     assertNotNull("GitHub repository does not exist", githubInfo);
   }
 

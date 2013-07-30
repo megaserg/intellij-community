@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2012 JetBrains s.r.o.
+ * Copyright 2000-2013 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ import com.intellij.openapi.vfs.impl.VirtualFileManagerImpl;
 import com.intellij.openapi.vfs.impl.jar.CoreJarFileSystem;
 import com.intellij.openapi.vfs.local.CoreLocalFileSystem;
 import com.intellij.openapi.vfs.pointers.VirtualFilePointerManager;
+import com.intellij.psi.FileContextProvider;
 import com.intellij.psi.PsiReferenceService;
 import com.intellij.psi.PsiReferenceServiceImpl;
 import com.intellij.psi.impl.meta.MetaRegistry;
@@ -116,6 +117,7 @@ public class CoreApplicationEnvironment {
 
     registerApplicationExtensionPoint(ContentBasedFileSubstitutor.EP_NAME, ContentBasedFileSubstitutor.class);
     registerExtensionPoint(Extensions.getRootArea(), BinaryFileStubBuilders.EP_NAME, FileTypeExtensionPoint.class);
+    registerExtensionPoint(Extensions.getRootArea(), FileContextProvider.EP_NAME, FileContextProvider.class);
 
     registerApplicationExtensionPoint(MetaDataContributor.EP_NAME, MetaDataContributor.class);
 
@@ -139,7 +141,7 @@ public class CoreApplicationEnvironment {
   protected JobLauncher createJobLauncher() {
     return new JobLauncher() {
       @Override
-      public <T> boolean invokeConcurrentlyUnderProgress(@NotNull List<T> things,
+      public <T> boolean invokeConcurrentlyUnderProgress(@NotNull List<? extends T> things,
                                                          ProgressIndicator progress,
                                                          boolean failFastOnAcquireReadAction,
                                                          @NotNull Processor<T> thingProcessor) throws ProcessCanceledException {
@@ -151,7 +153,7 @@ public class CoreApplicationEnvironment {
       }
 
       @Override
-      public <T> AsyncFuture<Boolean> invokeConcurrentlyUnderProgressAsync(@NotNull List<T> things,
+      public <T> AsyncFuture<Boolean> invokeConcurrentlyUnderProgressAsync(@NotNull List<? extends T> things,
                                                                            ProgressIndicator progress,
                                                                            boolean failFastOnAcquireReadAction,
                                                                            @NotNull Processor<T> thingProcessor) {
@@ -191,7 +193,7 @@ public class CoreApplicationEnvironment {
             }
 
             @Override
-            public Object get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            public Object get(long timeout, @NotNull TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
               return null;
             }
           });
@@ -263,6 +265,10 @@ public class CoreApplicationEnvironment {
         instance.removeExplicitExtension(language, object);
       }
     });
+  }
+
+  public void registerParserDefinition(Language language, ParserDefinition parserDefinition) {
+    addExplicitExtension(LanguageParserDefinitions.INSTANCE, language, parserDefinition);
   }
 
   public <T> void addExplicitExtension(final FileTypeExtension<T> instance, final FileType fileType, final T object) {

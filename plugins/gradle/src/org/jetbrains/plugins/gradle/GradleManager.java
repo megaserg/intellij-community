@@ -58,7 +58,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.plugins.gradle.config.GradleSettingsListenerAdapter;
 import org.jetbrains.plugins.gradle.remote.GradleJavaHelper;
-import org.jetbrains.plugins.gradle.remote.impl.GradleTaskManager;
+import org.jetbrains.plugins.gradle.service.task.GradleTaskManager;
 import org.jetbrains.plugins.gradle.service.GradleInstallationManager;
 import org.jetbrains.plugins.gradle.service.project.GradleAutoImportAware;
 import org.jetbrains.plugins.gradle.service.project.GradleProjectResolver;
@@ -169,7 +169,8 @@ implements ExternalSystemConfigurableAware, ExternalSystemUiAware, ExternalSyste
         boolean useWrapper = projectLevelSettings != null && !projectLevelSettings.isPreferLocalInstallationToWrapper();
         GradleExecutionSettings result = new GradleExecutionSettings(localGradlePath,
                                                                      settings.getServiceDirectoryPath(),
-                                                                     useWrapper);
+                                                                     useWrapper,
+                                                                     settings.getGradleVmOptions());
 
         for (GradleProjectResolverExtension extension : RESOLVER_EXTENSIONS.getValue()) {
           result.addResolverExtensionClass(extension.getClass().getName());
