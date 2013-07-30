@@ -19,8 +19,6 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.util.io.IOUtil;
 import gnu.trove.THashSet;
-import gnu.trove.set.hash.TCustomHashSet;
-import gnu.trove.set.hash.TLinkedHashSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.builders.BuildRootDescriptor;
@@ -39,7 +37,7 @@ final class FilesDelta {
   private static final Logger LOG = Logger.getInstance("#org.jetbrains.jps.incremental.fs.FilesDelta");
 
   private final Set<String> myDeletedPaths = Collections.synchronizedSet(new THashSet<String>(FileUtil.PATH_HASHING_STRATEGY));
-  private final Map<BuildRootDescriptor, Set<File>> myFilesToRecompile = Collections.synchronizedMap(new HashMap<BuildRootDescriptor, Set<File>>());
+  private final Map<BuildRootDescriptor, Set<File>> myFilesToRecompile = Collections.synchronizedMap(new LinkedHashMap<BuildRootDescriptor, Set<File>>());
 
   public void save(DataOutput out) throws IOException {
     out.writeInt(myDeletedPaths.size());
@@ -76,15 +74,13 @@ final class FilesDelta {
       if (descriptor != null) {
         files = myFilesToRecompile.get(descriptor);
         if (files == null) {
-          files = new THashSet<File>(FileUtil.FILE_HASHING_STRATEGY);
-          //TLink
-          files = new TCustomHashSet<File>(\)HashSet<File>(FileUtil.FILE_HASHING_STRATEGY);
+          files = new LinkedHashSet<File>();
           myFilesToRecompile.put(descriptor, files);
         }
       }
       else {
         LOG.debug("Cannot find root by " + rootId + ", delta will be skipped");
-        files = new THashSet<File>(FileUtil.FILE_HASHING_STRATEGY);
+        files = new LinkedHashSet<File>();
       }
       int filesCount = in.readInt();
       while (filesCount-- > 0) {
@@ -150,7 +146,7 @@ final class FilesDelta {
     synchronized (myFilesToRecompile) {
       files = myFilesToRecompile.get(root);
       if (files == null) {
-        files = new THashSet<File>(FileUtil.FILE_HASHING_STRATEGY);
+        files = new LinkedHashSet<File>();
         myFilesToRecompile.put(root, files);
       }
       return files.add(file);

@@ -64,8 +64,8 @@ public class BuildTargetConfiguration {
     return "";
   }
 
-  public boolean isTargetDirty(CompileContext context) {
-    final String currentState = getCurrentState(context);
+  public boolean isTargetDirty(CompileContext context, File projectRootFile) {
+    final String currentState = getCurrentState(context, projectRootFile);
     if (!currentState.equals(myConfiguration)) {
       LOG.debug(myTarget + " configuration was changed:");
       LOG.debug("Old:");
@@ -88,13 +88,13 @@ public class BuildTargetConfiguration {
     return false;
   }
 
-  public void save(CompileContext context) {
+  public void save(CompileContext context, File projectRootFile) {
     try {
       File configFile = getConfigFile();
       FileUtil.createParentDirs(configFile);
       Writer out = new BufferedWriter(new FileWriter(configFile));
       try {
-        String current = getCurrentState(context);
+        String current = getCurrentState(context, projectRootFile);
         out.write(current);
         myConfiguration = current;
       }
@@ -115,18 +115,18 @@ public class BuildTargetConfiguration {
     return new File(myTargetsState.getDataPaths().getTargetDataRoot(myTarget), "nonexistent-outputs.dat");
   }
 
-  private String getCurrentState(CompileContext context) {
+  private String getCurrentState(CompileContext context, File projectRootFile) {
     String state = myCurrentState;
     if (state == null) {
-      myCurrentState = state = saveToString(context);
+      myCurrentState = state = saveToString(context, projectRootFile);
     }
     return state;
   }
 
-  private String saveToString(CompileContext context) {
+  private String saveToString(CompileContext context, File projectRootFile) {
     StringWriter out = new StringWriter();
     //noinspection IOResourceOpenedButNotSafelyClosed
-    myTarget.writeConfiguration(context.getProjectDescriptor(), new PrintWriter(out));
+    myTarget.writeConfiguration(context.getProjectDescriptor(), new PrintWriter(out), projectRootFile);
     return out.toString();
   }
 

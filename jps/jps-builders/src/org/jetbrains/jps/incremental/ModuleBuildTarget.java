@@ -161,7 +161,7 @@ public final class ModuleBuildTarget extends JVMModuleBuildTarget<JavaSourceRoot
   }
 
   @Override
-  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out) {
+  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, File projectRootFile) {
     final JpsModule module = getModule();
 
     int fingerprint = getDependenciesFingerprint();

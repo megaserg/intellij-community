@@ -47,7 +47,7 @@ public abstract class BuildTarget<R extends BuildRootDescriptor> {
 
   public abstract Collection<BuildTarget<?>> computeDependencies(BuildTargetRegistry targetRegistry, TargetOutputIndex outputIndex);
 
-  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out) {
+  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, File projectRootFile) {
   }
 
   @NotNull

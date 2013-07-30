@@ -19,6 +19,7 @@ import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.util.SmartList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.api.GlobalOptions;
 import org.jetbrains.jps.builders.BuildRootIndex;
 import org.jetbrains.jps.builders.BuildTarget;
 import org.jetbrains.jps.builders.BuildTargetRegistry;
@@ -50,6 +51,8 @@ import java.util.List;
  * @author nik
  */
 public final class ResourcesTarget extends JVMModuleBuildTarget<ResourceRootDescriptor> {
+  public static final Boolean REBUILD_ON_DEPENDENCY_CHANGE =
+    Boolean.valueOf(System.getProperty(GlobalOptions.REBUILD_ON_DEPENDENCY_CHANGE_OPTION, "true"));
   private final ResourcesTargetType myTargetType;
 
   public ResourcesTarget(@NotNull JpsModule module, ResourcesTargetType targetType) {
@@ -90,10 +93,14 @@ public final class ResourcesTarget extends JVMModuleBuildTarget<ResourceRootDesc
 
   @NotNull
   @Override
-  public List<ResourceRootDescriptor> computeRootDescriptors(JpsModel model, ModuleExcludeIndex index, IgnoredFileIndex ignoredFileIndex, BuildDataPaths dataPaths) {
+  public List<ResourceRootDescriptor> computeRootDescriptors(JpsModel model,
+                                                             ModuleExcludeIndex index,
+                                                             IgnoredFileIndex ignoredFileIndex,
+                                                             BuildDataPaths dataPaths) {
     List<ResourceRootDescriptor> roots = new ArrayList<ResourceRootDescriptor>();
     JavaSourceRootType type = isTests() ? JavaSourceRootType.TEST_SOURCE : JavaSourceRootType.SOURCE;
-    Iterable<ExcludedJavaSourceRootProvider> excludedRootProviders = JpsServiceManager.getInstance().getExtensions(ExcludedJavaSourceRootProvider.class);
+    Iterable<ExcludedJavaSourceRootProvider> excludedRootProviders =
+      JpsServiceManager.getInstance().getExtensions(ExcludedJavaSourceRootProvider.class);
 
     roots_loop:
     for (JpsTypedModuleSourceRoot<JpsSimpleElement<JavaSourceRootProperties>> sourceRoot : myModule.getSourceRoots(type)) {
@@ -117,14 +124,17 @@ public final class ResourcesTarget extends JVMModuleBuildTarget<ResourceRootDesc
   }
 
   @Override
-  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out) {
+  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, File projectRootFile) {
     int fingerprint = 0;
+
     final BuildRootIndex rootIndex = pd.getBuildRootIndex();
     final List<ResourceRootDescriptor> roots = rootIndex.getTargetRoots(this, null);
     for (ResourceRootDescriptor root : roots) {
-      fingerprint += FileUtil.fileHashCode(root.getRootFile());
+      String relativePath = FileUtil.getRelativePath(projectRootFile, root.getRootFile());
+      fingerprint += FileUtil.pathHashCode(relativePath);
       fingerprint += root.getPackagePrefix().hashCode();
     }
+
     out.write(Integer.toHexString(fingerprint));
   }
 

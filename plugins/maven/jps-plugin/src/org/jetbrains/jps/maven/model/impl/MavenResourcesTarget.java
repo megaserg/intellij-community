@@ -142,7 +142,7 @@ public class MavenResourcesTarget extends ModuleBasedTarget<MavenResourceRootDes
   }
 
   @Override
-  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out) {
+  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, File projectRootFile) {
     final BuildDataPaths dataPaths = pd.getTargetsState().getDataPaths();
     final MavenModuleResourceConfiguration configuration = getModuleResourcesConfiguration(dataPaths);
     if (configuration != null) {
