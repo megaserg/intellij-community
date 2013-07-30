@@ -33,17 +33,17 @@ SET EXEC_ANT="%JAVA_HOME%\bin\java.exe" -Dant.home=%ANT_HOME% -classpath "%ANT_H
 CALL %EXEC_ANT% -f build/update.xml %*
 IF NOT ERRORLEVEL 0 GOTO failed
 
-DEL /Q /S %WORK_IDEA_HOME%\lib
-DEL /Q /S %WORK_IDEA_HOME%\plugins
+DEL /Q /S "%WORK_IDEA_HOME%\lib"
+DEL /Q /S "%WORK_IDEA_HOME%\plugins"
 
-XCOPY %DEV_IDEA_HOME%\bin\win\*.dll %WORK_IDEA_HOME%\bin\ /Q /E /Y
-XCOPY %DEV_IDEA_HOME%\bin\win\fsnotifier.exe %WORK_IDEA_HOME%\bin\ /Q /E /Y
-XCOPY %DEV_IDEA_HOME%\bin\win\runnerw.exe %WORK_IDEA_HOME%\bin\ /Q /E /Y
-XCOPY %DEV_IDEA_HOME%\out\deploy\*.* %WORK_IDEA_HOME%\ /Q /E /Y
+XCOPY "%DEV_IDEA_HOME%\bin\win\*.dll" "%WORK_IDEA_HOME%\bin\" /Q /E /Y
+XCOPY "%DEV_IDEA_HOME%\bin\win\fsnotifier.exe" "%WORK_IDEA_HOME%\bin\" /Q /E /Y
+XCOPY "%DEV_IDEA_HOME%\bin\win\runnerw.exe" "%WORK_IDEA_HOME%\bin\" /Q /E /Y
+XCOPY "%DEV_IDEA_HOME%\out\deploy\*.*" "%WORK_IDEA_HOME%\" /Q /E /Y
 GOTO done
 
 :failed
 ECHO "Update failed; work IDEA build not modified."
 
 :done
-CD /D %WORK_IDEA_HOME%\bin
+CD /D "%WORK_IDEA_HOME%\bin"
