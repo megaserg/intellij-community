@@ -37,7 +37,7 @@ final class FilesDelta {
   private static final Logger LOG = Logger.getInstance("#org.jetbrains.jps.incremental.fs.FilesDelta");
 
   private final Set<String> myDeletedPaths = Collections.synchronizedSet(new THashSet<String>(FileUtil.PATH_HASHING_STRATEGY));
-  private final Map<BuildRootDescriptor, Set<File>> myFilesToRecompile = Collections.synchronizedMap(new LinkedHashMap<BuildRootDescriptor, Set<File>>());
+  private final Map<BuildRootDescriptor, Set<File>> myFilesToRecompile = Collections.synchronizedMap(new LinkedHashMap<BuildRootDescriptor, Set<File>>()); //TODO(serebryakov): changed from HashMap<BuildRootDescriptor, Set<File>>, consequences?
 
   public void save(DataOutput out) throws IOException {
     out.writeInt(myDeletedPaths.size());
@@ -74,13 +74,13 @@ final class FilesDelta {
       if (descriptor != null) {
         files = myFilesToRecompile.get(descriptor);
         if (files == null) {
-          files = new LinkedHashSet<File>();
+          files = new LinkedHashSet<File>(); //TODO(serebryakov): changed from THashSet<File>(FileUtil.FILE_HASHING_STRATEGY), consequences?
           myFilesToRecompile.put(descriptor, files);
         }
       }
       else {
         LOG.debug("Cannot find root by " + rootId + ", delta will be skipped");
-        files = new LinkedHashSet<File>();
+        files = new LinkedHashSet<File>(); //TODO(serebryakov): changed from THashSet<File>(FileUtil.FILE_HASHING_STRATEGY), consequences?
       }
       int filesCount = in.readInt();
       while (filesCount-- > 0) {
@@ -146,7 +146,7 @@ final class FilesDelta {
     synchronized (myFilesToRecompile) {
       files = myFilesToRecompile.get(root);
       if (files == null) {
-        files = new LinkedHashSet<File>();
+        files = new LinkedHashSet<File>(); //TODO(serebryakov): changed from THashSet<File>(FileUtil.FILE_HASHING_STRATEGY), consequences?
         myFilesToRecompile.put(root, files);
       }
       return files.add(file);

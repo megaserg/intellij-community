@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.asm4.ClassReader;
 import org.jetbrains.asm4.Opcodes;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.incremental.storage.RelativeFileKeyDescriptor;
 
 import java.io.File;
@@ -89,9 +90,9 @@ public class Mappings {
   @Nullable
   private Collection<String> myRemovedFiles;
 
-  private File myProjectRootFile = null;
+  private Relativator myRelativator = null;
 
-  private Mappings(final Mappings base, File projectRootFile) throws IOException {
+  private Mappings(final Mappings base, Relativator relativator) throws IOException {
     myLock = base.myLock;
     myIsDelta = true;
     myChangedClasses = new TIntHashSet(DEFAULT_SET_CAPACITY, DEFAULT_SET_LOAD_FACTOR);
@@ -104,11 +105,11 @@ public class Mappings {
     myEmptyName = myContext.get("");
     myObjectClassName = myContext.get("java/lang/Object");
     myDebugS = base.myDebugS;
-    myProjectRootFile = projectRootFile;
+    myRelativator = relativator;
     createImplementation();
   }
 
-  public Mappings(final File rootDir, final boolean transientDelta, File projectRootFile) throws IOException {
+  public Mappings(final File rootDir, final boolean transientDelta, Relativator relativator) throws IOException {
     myLock = new Object();
     myIsDelta = false;
     myChangedClasses = null;
@@ -116,7 +117,7 @@ public class Mappings {
     myDeletedClasses = null;
     myDeltaIsTransient = transientDelta;
     myRootDir = rootDir;
-    myProjectRootFile = projectRootFile;
+    myRelativator = relativator;
     createImplementation();
     myInitName = myContext.get("<init>");
     myEmptyName = myContext.get("");
@@ -145,17 +146,17 @@ public class Mappings {
       myClassToSubclasses = new IntIntPersistentMultiMaplet(DependencyContext.getTableFile(myRootDir, CLASS_TO_SUBCLASSES), INT_KEY_DESCRIPTOR);
       myClassToClassDependency = new IntIntPersistentMultiMaplet(DependencyContext.getTableFile(myRootDir, CLASS_TO_CLASS), INT_KEY_DESCRIPTOR);
       mySourceFileToClasses = new ObjectObjectPersistentMultiMaplet<File, ClassRepr>(
-        DependencyContext.getTableFile(myRootDir, SOURCE_TO_CLASS), new RelativeFileKeyDescriptor(myProjectRootFile), ClassRepr.externalizer(myContext),
+        DependencyContext.getTableFile(myRootDir, SOURCE_TO_CLASS), new RelativeFileKeyDescriptor(myRelativator), ClassRepr.externalizer(myContext),
         ourClassSetConstructor
       );
-      myClassToSourceFile = new IntObjectPersistentMaplet<File>(DependencyContext.getTableFile(myRootDir, CLASS_TO_SOURCE), new RelativeFileKeyDescriptor(myProjectRootFile));
+      myClassToSourceFile = new IntObjectPersistentMaplet<File>(DependencyContext.getTableFile(myRootDir, CLASS_TO_SOURCE), new RelativeFileKeyDescriptor(myRelativator));
     }
   }
 
   public Mappings createDelta() {
     synchronized (myLock) {
       try {
-        return new Mappings(this, myProjectRootFile);
+        return new Mappings(this, myRelativator);
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -2147,7 +2148,7 @@ public class Mappings {
     return new Callbacks.Backend() {
       public void associate(final String classFileName, final String sourceFileName, final ClassReader cr) {
         synchronized (myLock) {
-          String relativeClassFileName = FileUtil.getRelativePath(myProjectRootFile, new File(classFileName));
+          String relativeClassFileName = myRelativator.getRelativePath(new File(classFileName));
           final int classFileNameS = myContext.get(relativeClassFileName);
           final Pair<ClassRepr, Set<UsageRepr.Usage>> result = new ClassfileAnalyzer(myContext).analyze(classFileNameS, cr);
           final ClassRepr repr = result.first;

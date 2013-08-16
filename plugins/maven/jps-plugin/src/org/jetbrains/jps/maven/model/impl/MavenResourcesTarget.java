@@ -20,6 +20,7 @@ import com.intellij.openapi.util.text.StringUtil;
 import gnu.trove.THashSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.builders.*;
 import org.jetbrains.jps.builders.storage.BuildDataPaths;
 import org.jetbrains.jps.cmdline.ProjectDescriptor;
@@ -142,7 +143,7 @@ public class MavenResourcesTarget extends ModuleBasedTarget<MavenResourceRootDes
   }
 
   @Override
-  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, File projectRootFile) {
+  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, Relativator relativator) {
     final BuildDataPaths dataPaths = pd.getTargetsState().getDataPaths();
     final MavenModuleResourceConfiguration configuration = getModuleResourcesConfiguration(dataPaths);
     if (configuration != null) {

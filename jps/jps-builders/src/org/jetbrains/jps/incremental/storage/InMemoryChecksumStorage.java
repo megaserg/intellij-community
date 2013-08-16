@@ -17,6 +17,7 @@ package org.jetbrains.jps.incremental.storage;
 
 import com.intellij.util.containers.HashMap;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.Relativator;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,8 +33,8 @@ import java.io.IOException;
 public class InMemoryChecksumStorage extends ChecksumStorage implements Checksums {
   private HashMap<File, ChecksumPerTarget[]> storage = new HashMap<File, ChecksumPerTarget[]>();
 
-  public InMemoryChecksumStorage(File storePath, BuildTargetsState targetsState, File projectRootFile) throws IOException {
-    super(storePath, targetsState, projectRootFile);
+  public InMemoryChecksumStorage(File storePath, BuildTargetsState targetsState, Relativator relativator) throws IOException {
+    super(storePath, targetsState, relativator);
   }
 
   @Override

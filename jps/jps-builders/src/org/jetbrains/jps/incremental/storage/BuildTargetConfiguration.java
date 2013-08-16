@@ -21,6 +21,7 @@ import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.util.SmartList;
 import gnu.trove.THashSet;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.builders.BuildTarget;
 import org.jetbrains.jps.incremental.CompileContext;
 import org.jetbrains.jps.incremental.GlobalContextKey;
@@ -64,8 +65,8 @@ public class BuildTargetConfiguration {
     return "";
   }
 
-  public boolean isTargetDirty(CompileContext context, File projectRootFile) {
-    final String currentState = getCurrentState(context, projectRootFile);
+  public boolean isTargetDirty(CompileContext context, Relativator relativator) {
+    final String currentState = getCurrentState(context, relativator);
     if (!currentState.equals(myConfiguration)) {
       LOG.debug(myTarget + " configuration was changed:");
       LOG.debug("Old:");
@@ -88,13 +89,13 @@ public class BuildTargetConfiguration {
     return false;
   }
 
-  public void save(CompileContext context, File projectRootFile) {
+  public void save(CompileContext context, Relativator relativator) {
     try {
       File configFile = getConfigFile();
       FileUtil.createParentDirs(configFile);
       Writer out = new BufferedWriter(new FileWriter(configFile));
       try {
-        String current = getCurrentState(context, projectRootFile);
+        String current = getCurrentState(context, relativator);
         out.write(current);
         myConfiguration = current;
       }
@@ -115,22 +116,22 @@ public class BuildTargetConfiguration {
     return new File(myTargetsState.getDataPaths().getTargetDataRoot(myTarget), "nonexistent-outputs.dat");
   }
 
-  private String getCurrentState(CompileContext context, File projectRootFile) {
+  private String getCurrentState(CompileContext context, Relativator relativator) {
     String state = myCurrentState;
     if (state == null) {
-      myCurrentState = state = saveToString(context, projectRootFile);
+      myCurrentState = state = saveToString(context, relativator);
     }
     return state;
   }
 
-  private String saveToString(CompileContext context, File projectRootFile) {
+  private String saveToString(CompileContext context, Relativator relativator) {
     StringWriter out = new StringWriter();
     //noinspection IOResourceOpenedButNotSafelyClosed
-    myTarget.writeConfiguration(context.getProjectDescriptor(), new PrintWriter(out), projectRootFile);
+    myTarget.writeConfiguration(context.getProjectDescriptor(), new PrintWriter(out), relativator);
     return out.toString();
   }
 
-  public void storeNonexistentOutputRoots(CompileContext context, File projectRootFile) throws IOException {
+  public void storeNonexistentOutputRoots(CompileContext context, Relativator relativator) throws IOException {
     Collection<File> outputRoots = myTarget.getOutputRoots(context);
     List<String> nonexistentOutputRoots = new SmartList<String>();
     for (File root : outputRoots) {
@@ -145,14 +146,14 @@ public class BuildTargetConfiguration {
     else {
       List<String> relativePaths = new SmartList<String>();
       for (String absolutePath : nonexistentOutputRoots) {
-        String relativePath = FileUtil.getRelativePath(projectRootFile, new File(absolutePath));
+        String relativePath = relativator.getRelativePath(absolutePath);
         relativePaths.add(relativePath);
       }
       FileUtil.writeToFile(file, StringUtil.join(relativePaths, "\n"));
     }
   }
 
-  public boolean outputRootWasDeleted(CompileContext context, File projectRootFile) throws IOException {
+  public boolean outputRootWasDeleted(CompileContext context, Relativator relativator) throws IOException {
     List<String> nonexistentOutputRoots = new SmartList<String>();
 
     final Collection<File> targetRoots = myTarget.getOutputRoots(context);
@@ -189,7 +190,7 @@ public class BuildTargetConfiguration {
       List<String> relativePaths = StringUtil.split(FileUtil.loadFile(file), "\n");
       List<String> absolutePaths = new SmartList<String>();
       for (String relativePath : relativePaths) {
-        absolutePaths.add(FileUtil.join(projectRootFile.getAbsolutePath(), relativePath));
+        absolutePaths.add(relativator.getAbsolutePath(relativePath));
       }
       storedNonExistentOutputs = new THashSet<String>(absolutePaths, FileUtil.PATH_HASHING_STRATEGY);
     }

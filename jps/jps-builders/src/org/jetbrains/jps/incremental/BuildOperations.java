@@ -18,6 +18,7 @@ package org.jetbrains.jps.incremental;
 import com.intellij.openapi.util.io.FileUtil;
 import gnu.trove.THashSet;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.builders.*;
 import org.jetbrains.jps.builders.impl.BuildOutputConsumerImpl;
 import org.jetbrains.jps.builders.impl.BuildTargetChunk;
@@ -45,7 +46,7 @@ public class BuildOperations {
   private BuildOperations() {
   }
 
-  public static void ensureFSStateInitialized(CompileContext context, BuildTarget<?> target, File projectRootFile) throws IOException {
+  public static void ensureFSStateInitialized(CompileContext context, BuildTarget<?> target, Relativator relativator) throws IOException {
     final ProjectDescriptor pd = context.getProjectDescriptor();
     final Timestamps timestamps = pd.timestamps.getStorage();
     final Checksums checksums = pd.checksums.getStorage();
@@ -53,13 +54,13 @@ public class BuildOperations {
     if (context.isProjectRebuild()) {
       FSOperations.markDirtyFiles(context, target, timestamps, checksums, true, null, null);
       pd.fsState.markInitialScanPerformed(target);
-      configuration.save(context, projectRootFile);
+      configuration.save(context, relativator);
     }
-    else if (context.getScope().isBuildForced(target) || configuration.isTargetDirty(context, projectRootFile) || configuration.outputRootWasDeleted(context, projectRootFile)) {
+    else if (context.getScope().isBuildForced(target) || configuration.isTargetDirty(context, relativator) || configuration.outputRootWasDeleted(context, relativator)) {
       initTargetFSState(context, target, true);
       IncProjectBuilder.clearOutputFiles(context, target);
       pd.dataManager.cleanTargetStorages(target);
-      configuration.save(context, projectRootFile);
+      configuration.save(context, relativator);
     }
     else if (!pd.fsState.isInitialScanPerformed(target)) {
       initTargetFSState(context, target, false);
@@ -106,11 +107,11 @@ public class BuildOperations {
     }
   }
 
-  public static void markTargetsUpToDate(CompileContext context, BuildTargetChunk chunk, File projectRootFile) throws IOException {
+  public static void markTargetsUpToDate(CompileContext context, BuildTargetChunk chunk, Relativator relativator) throws IOException {
     final ProjectDescriptor pd = context.getProjectDescriptor();
     final BuildFSState fsState = pd.fsState;
     for (BuildTarget<?> target : chunk.getTargets()) {
-      pd.getTargetsState().getTargetConfiguration(target).storeNonexistentOutputRoots(context, projectRootFile);
+      pd.getTargetsState().getTargetConfiguration(target).storeNonexistentOutputRoots(context, relativator);
     }
     if (!Utils.errorsDetected(context) && !context.getCancelStatus().isCanceled()) {
       boolean marked = dropRemovedPaths(context, chunk);

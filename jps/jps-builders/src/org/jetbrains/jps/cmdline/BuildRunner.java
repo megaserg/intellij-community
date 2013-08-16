@@ -20,6 +20,7 @@ import com.intellij.openapi.util.io.FileUtil;
 import gnu.trove.THashSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.api.BuildType;
 import org.jetbrains.jps.api.CanceledStatus;
 import org.jetbrains.jps.api.GlobalOptions;
@@ -57,13 +58,13 @@ public class BuildRunner {
   private final List<String> myFilePaths;
   private final Map<String, String> myBuilderParams;
   private boolean myForceCleanCaches;
-  private File myProjectRootFile;
+  private Relativator myRelativator;
 
-  public BuildRunner(JpsModelLoader modelLoader, List<String> filePaths, Map<String, String> builderParams, File projectRootFile) {
+  public BuildRunner(JpsModelLoader modelLoader, List<String> filePaths, Map<String, String> builderParams, Relativator relativator) {
     myModelLoader = modelLoader;
     myFilePaths = filePaths;
     myBuilderParams = builderParams;
-    myProjectRootFile = projectRootFile;
+    myRelativator = relativator;
   }
 
   public ProjectDescriptor load(MessageHandler msgHandler, File dataStorageRoot, BuildFSState fsState) throws IOException {
@@ -79,9 +80,9 @@ public class BuildRunner {
     ProjectChecksums projectChecksums = null;
     BuildDataManager dataManager = null;
     try {
-      projectTimestamps = new ProjectTimestamps(dataStorageRoot, targetsState, myProjectRootFile);
-      projectChecksums = new ProjectChecksums(dataStorageRoot, targetsState, myProjectRootFile);
-      dataManager = new BuildDataManager(dataPaths, targetsState, STORE_TEMP_CACHES_IN_MEMORY, myProjectRootFile);
+      projectTimestamps = new ProjectTimestamps(dataStorageRoot, targetsState, myRelativator);
+      projectChecksums = new ProjectChecksums(dataStorageRoot, targetsState, myRelativator);
+      dataManager = new BuildDataManager(dataPaths, targetsState, STORE_TEMP_CACHES_IN_MEMORY, myRelativator);
       if (dataManager.versionDiffers()) {
         myForceCleanCaches = true;
         msgHandler.processMessage(new CompilerMessage("build", BuildMessage.Kind.INFO, "Dependency data format has changed, project rebuild required"));
@@ -102,9 +103,9 @@ public class BuildRunner {
       myForceCleanCaches = true;
       FileUtil.delete(dataStorageRoot);
       targetsState = new BuildTargetsState(dataPaths, jpsModel, buildRootIndex);
-      projectTimestamps = new ProjectTimestamps(dataStorageRoot, targetsState, myProjectRootFile);
-      projectChecksums = new ProjectChecksums(dataStorageRoot, targetsState, myProjectRootFile);
-      dataManager = new BuildDataManager(dataPaths, targetsState, STORE_TEMP_CACHES_IN_MEMORY, myProjectRootFile);
+      projectTimestamps = new ProjectTimestamps(dataStorageRoot, targetsState, myRelativator);
+      projectChecksums = new ProjectChecksums(dataStorageRoot, targetsState, myRelativator);
+      dataManager = new BuildDataManager(dataPaths, targetsState, STORE_TEMP_CACHES_IN_MEMORY, myRelativator);
       // second attempt succeeded
       msgHandler.processMessage(new CompilerMessage("build", BuildMessage.Kind.INFO, "Project rebuild forced: " + e.getMessage()));
     }
@@ -126,7 +127,7 @@ public class BuildRunner {
     for (int attempt = 0; attempt < 2; attempt++) {
       final boolean forceClean = myForceCleanCaches && myFilePaths.isEmpty();
       final CompileScope compileScope = createCompilationScope(pd, scopes, myFilePaths, forceClean, includeDependenciesToScope);
-      final IncProjectBuilder builder = new IncProjectBuilder(pd, BuilderRegistry.getInstance(), myBuilderParams, cs, constantSearch, Utils.IS_TEST_MODE, myProjectRootFile);
+      final IncProjectBuilder builder = new IncProjectBuilder(pd, BuilderRegistry.getInstance(), myBuilderParams, cs, constantSearch, Utils.IS_TEST_MODE, myRelativator);
       builder.addMessageHandler(msgHandler);
       try {
         switch (buildType) {

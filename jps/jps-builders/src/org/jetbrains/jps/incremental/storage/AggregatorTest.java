@@ -1,5 +1,8 @@
 package org.jetbrains.jps.incremental.storage;
 
+import org.jetbrains.jps.Relativator;
+import org.jetbrains.jps.SingleRootRelativator;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -9,8 +12,8 @@ import java.io.IOException;
 public class AggregatorTest {
   public static void main(String[] args) throws IOException {
     File projectRootFile = new File("C:\\Work\\intellij-community-13");
-
-    AbstractAggregator aggregator = new TimestampAggregator(projectRootFile);
+    Relativator relativator = new SingleRootRelativator(projectRootFile);
+    AbstractAggregator aggregator = new TimestampAggregator(relativator);
     //AbstractAggregator aggregator = new ChecksumAggregator();
 
     //aggregator.traverse(new File("C:\\Work\\TwinedDeps\\src"));

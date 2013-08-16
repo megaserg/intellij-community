@@ -2,6 +2,7 @@ package org.jetbrains.jps.incremental.storage;
 
 import com.intellij.util.ArrayUtil;
 import com.intellij.util.io.DataExternalizer;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.builders.BuildTarget;
 
 import java.io.DataInput;
@@ -23,8 +24,8 @@ public class ChecksumStorage extends AbstractStateStorage<File, ChecksumStorage.
    */
   private final BuildTargetsState myTargetsState;
 
-  public ChecksumStorage(File storePath, BuildTargetsState targetsState, File projectRootFile) throws IOException {
-    super(storePath, new RelativeFileKeyDescriptor(projectRootFile), new ChecksumStateExternalizer());
+  public ChecksumStorage(File storePath, BuildTargetsState targetsState, Relativator relativator) throws IOException {
+    super(storePath, new RelativeFileKeyDescriptor(relativator), new ChecksumStateExternalizer());
     myTargetsState = targetsState;
   }
 

@@ -17,6 +17,7 @@ package org.jetbrains.jps.incremental.storage;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.io.FileUtil;
+import org.jetbrains.jps.Relativator;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,12 +31,12 @@ public class ProjectChecksums {
   private final ChecksumStorage myChecksums;
   private final File myChecksumsRoot;
 
-  public ProjectChecksums(final File dataStorageRoot, BuildTargetsState targetsState, File projectRootFile) throws IOException {
+  public ProjectChecksums(final File dataStorageRoot, BuildTargetsState targetsState, Relativator relativator) throws IOException {
     myChecksumsRoot = new File(dataStorageRoot, CHECKSUM_STORAGE);
     /*
      * Could be switched to InMemoryChecksumStorage.
      */
-    myChecksums = new ChecksumStorage(new File(myChecksumsRoot, "data"), targetsState, projectRootFile);
+    myChecksums = new ChecksumStorage(new File(myChecksumsRoot, "data"), targetsState, relativator);
     //myChecksums = new InMemoryChecksumStorage(new File(myChecksumsRoot, "data"), targetsState);
   }
 

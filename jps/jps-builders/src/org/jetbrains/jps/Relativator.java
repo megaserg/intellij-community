@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2012 JetBrains s.r.o.
+ * Copyright 2000-2013 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jetbrains.jps.builders.storage;
-
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.jps.Relativator;
-import org.jetbrains.jps.incremental.storage.StorageOwner;
+package org.jetbrains.jps;
 
 import java.io.File;
-import java.io.IOException;
 
 /**
- * @author nik
+ * @author Sergey Serebryakov
  */
-public abstract class StorageProvider<S extends StorageOwner> {
-  @NotNull
-  public abstract S createStorage(File targetDataDir, Relativator relativator) throws IOException;
+public interface Relativator {
+  void enumerateProjectPath(String path);
+  String getRelativePath(String absolutePath);
+  String getRelativePath(File absolutePath);
+  String getAbsolutePath(String relativePath);
+  String getAbsolutePath(File relativePath);
 }

@@ -18,13 +18,13 @@ package org.jetbrains.jps.builders.impl.storage;
 import com.intellij.openapi.util.AtomicNotNullLazyValue;
 import com.intellij.openapi.util.NotNullLazyValue;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.builders.BuildTarget;
 import org.jetbrains.jps.builders.storage.BuildDataPaths;
 import org.jetbrains.jps.builders.storage.StorageProvider;
 import org.jetbrains.jps.incremental.storage.CompositeStorageOwner;
 import org.jetbrains.jps.incremental.storage.StorageOwner;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,14 +36,14 @@ import java.util.concurrent.ConcurrentMap;
 public class BuildTargetStorages extends CompositeStorageOwner {
   private final BuildTarget<?> myTarget;
   private final BuildDataPaths myPaths;
-  private final File myProjectRootFile;
+  private final Relativator myRelativator;
   private final ConcurrentMap<StorageProvider<?>, AtomicNotNullLazyValue<? extends StorageOwner>> myStorages 
     = new ConcurrentHashMap<StorageProvider<?>, AtomicNotNullLazyValue<? extends StorageOwner>>(16, 0.75f, 1);
 
-  public BuildTargetStorages(BuildTarget<?> target, BuildDataPaths paths, File projectRootFile) {
+  public BuildTargetStorages(BuildTarget<?> target, BuildDataPaths paths, Relativator relativator) {
     myTarget = target;
     myPaths = paths;
-    myProjectRootFile = projectRootFile;
+    myRelativator = relativator;
   }
 
   @NotNull 
@@ -55,7 +55,7 @@ public class BuildTargetStorages extends CompositeStorageOwner {
         @Override
         protected S compute() {
           try {
-            return provider.createStorage(myPaths.getTargetDataRoot(myTarget), myProjectRootFile);
+            return provider.createStorage(myPaths.getTargetDataRoot(myTarget), myRelativator);
           }
           catch (IOException e) {
             throw new RuntimeException(e);

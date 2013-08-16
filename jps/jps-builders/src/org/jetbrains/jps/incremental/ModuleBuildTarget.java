@@ -22,6 +22,7 @@ import gnu.trove.THashSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.ProjectPaths;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.api.GlobalOptions;
 import org.jetbrains.jps.builders.BuildTarget;
 import org.jetbrains.jps.builders.BuildTargetRegistry;
@@ -161,7 +162,7 @@ public final class ModuleBuildTarget extends JVMModuleBuildTarget<JavaSourceRoot
   }
 
   @Override
-  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, File projectRootFile) {
+  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, Relativator relativator) {
     final JpsModule module = getModule();
 
     int fingerprint = getDependenciesFingerprint();

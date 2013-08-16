@@ -19,6 +19,8 @@ import com.intellij.util.ArrayUtil;
 import com.intellij.util.ParameterizedRunnable;
 import com.sampullara.cli.Args;
 import com.sampullara.cli.Argument;
+import org.jetbrains.jps.Relativator;
+import org.jetbrains.jps.SingleRootRelativator;
 import org.jetbrains.jps.api.BuildType;
 import org.jetbrains.jps.api.CanceledStatus;
 import org.jetbrains.jps.builders.java.JavaModuleBuildTargetType;
@@ -64,7 +66,7 @@ public class Standalone {
   @Argument(value = "i", description = "Build incrementally")
   public boolean incremental;
 
-  private static File myProjectRootFile;
+  private static Relativator myRelativator;
 
   public static void main(String[] args) {
     Standalone instance = new Standalone();
@@ -86,7 +88,8 @@ public class Standalone {
       printUsageAndExit();
     }
 
-    myProjectRootFile = new File(projectPaths.get(0));
+    File projectRootFile = new File(projectPaths.get(0));
+    myRelativator = new SingleRootRelativator(projectRootFile);
     instance.loadAndRunBuild(projectPaths.get(0));
     System.exit(0);
   }
@@ -180,7 +183,7 @@ public class Standalone {
 
   public static void runBuild(JpsModelLoader loader, File dataStorageRoot, MessageHandler messageHandler, List<TargetTypeBuildScope> scopes,
                               boolean includeDependenciesToScope) throws Exception {
-    final BuildRunner buildRunner = new BuildRunner(loader, Collections.<String>emptyList(), Collections.<String, String>emptyMap(), myProjectRootFile);
+    final BuildRunner buildRunner = new BuildRunner(loader, Collections.<String>emptyList(), Collections.<String, String>emptyMap(), myRelativator);
     ProjectDescriptor descriptor = buildRunner.load(messageHandler, dataStorageRoot, new BuildFSState(true));
     try {
       buildRunner.runBuild(descriptor, CanceledStatus.NULL, null, messageHandler, BuildType.BUILD, scopes, includeDependenciesToScope);

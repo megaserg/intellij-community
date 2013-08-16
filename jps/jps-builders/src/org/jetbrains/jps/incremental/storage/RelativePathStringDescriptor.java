@@ -19,6 +19,7 @@ import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.util.io.EnumeratorStringDescriptor;
 import com.intellij.util.io.IOUtil;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.jps.Relativator;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -30,34 +31,34 @@ import java.io.IOException;
  */
 public class RelativePathStringDescriptor extends EnumeratorStringDescriptor {
   private final byte[] buffer = IOUtil.allocReadWriteUTFBuffer();
-  private File myProjectRootFile = null;
+  private Relativator myRelativator = null;
 
-  public RelativePathStringDescriptor(File projectRootFile) {
-    myProjectRootFile = projectRootFile;
+  public RelativePathStringDescriptor(Relativator relativator) {
+    myRelativator = relativator;
   }
 
   @Override
   public void save(final DataOutput storage, @NotNull final String value) throws IOException {
-    String relativePath = FileUtil.getRelativePath(myProjectRootFile, new File(value));
+    String relativePath = myRelativator.getRelativePath(value);
     IOUtil.writeUTFFast(buffer, storage, relativePath);
   }
 
   @Override
   public String read(final DataInput storage) throws IOException {
-    String absolutePath = FileUtil.join(myProjectRootFile.getAbsolutePath(), IOUtil.readUTFFast(buffer, storage));
+    String absolutePath = myRelativator.getAbsolutePath(IOUtil.readUTFFast(buffer, storage));
     return absolutePath;
   }
 
   @Override
   public int getHashCode(String value) {
-    String relativePath = FileUtil.getRelativePath(myProjectRootFile, new File(value));
+    String relativePath = myRelativator.getRelativePath(value);
     return FileUtil.pathHashCode(relativePath);
   }
 
   @Override
   public boolean isEqual(String val1, String val2) {
-    String relativePath1 = FileUtil.getRelativePath(myProjectRootFile, new File(val1));
-    String relativePath2 = FileUtil.getRelativePath(myProjectRootFile, new File(val2));
+    String relativePath1 = myRelativator.getRelativePath(val1);
+    String relativePath2 = myRelativator.getRelativePath(val2);
     return FileUtil.pathsEqual(relativePath1, relativePath2);
   }
 }

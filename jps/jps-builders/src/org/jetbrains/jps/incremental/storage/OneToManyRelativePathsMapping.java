@@ -21,6 +21,7 @@ import com.intellij.util.io.IOUtil;
 import gnu.trove.THashSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.Relativator;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -32,8 +33,8 @@ import java.util.Set;
  * @author Sergey Serebryakov
  */
 public class OneToManyRelativePathsMapping extends AbstractStateStorage<String, Collection<String>> {
-  public OneToManyRelativePathsMapping(File storePath, File projectRootFile) throws IOException {
-    super(storePath, new RelativePathStringDescriptor(projectRootFile), new RelativePathCollectionExternalizer(projectRootFile));
+  public OneToManyRelativePathsMapping(File storePath, Relativator relativator) throws IOException {
+    super(storePath, new RelativePathStringDescriptor(relativator), new RelativePathCollectionExternalizer(relativator));
   }
 
   @Override
@@ -81,14 +82,14 @@ public class OneToManyRelativePathsMapping extends AbstractStateStorage<String, 
   }
 
   private static class RelativePathCollectionExternalizer implements DataExternalizer<Collection<String>> {
-    private File myProjectPathFile;
-    private RelativePathCollectionExternalizer(File projectPathFile) {
-      myProjectPathFile = projectPathFile;
+    private Relativator myRelativator;
+    private RelativePathCollectionExternalizer(Relativator relativator) {
+      myRelativator = relativator;
     }
 
     public void save(DataOutput out, Collection<String> value) throws IOException {
       for (String str : value) {
-        String relativePath = FileUtil.getRelativePath(myProjectPathFile, new File(str));
+        String relativePath = myRelativator.getRelativePath(str);
         IOUtil.writeString(relativePath, out);
       }
     }
@@ -98,7 +99,7 @@ public class OneToManyRelativePathsMapping extends AbstractStateStorage<String, 
       final DataInputStream stream = (DataInputStream)in;
       while (stream.available() > 0) {
         final String str = IOUtil.readString(stream);
-        String absolutePath = FileUtil.join(myProjectPathFile.getAbsolutePath(), str); // TODO (serebryakov): system independency
+        String absolutePath = myRelativator.getAbsolutePath(str); // TODO (serebryakov): system independency
         result.add(absolutePath);
       }
       return result;

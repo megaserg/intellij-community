@@ -4,6 +4,7 @@ import com.intellij.openapi.util.io.FileSystemUtil;
 import com.intellij.openapi.util.io.FileUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.builders.*;
 import org.jetbrains.jps.builders.impl.BuildDataPathsImpl;
 import org.jetbrains.jps.builders.impl.BuildRootDescriptorImpl;
@@ -30,9 +31,9 @@ import java.util.Random;
 public class ChecksumAggregator extends AbstractAggregator {
   ProjectChecksums myChecksums;
 
-  public ChecksumAggregator(File projectRootFile) throws IOException {
+  public ChecksumAggregator(Relativator relativator) throws IOException {
     super();
-    myChecksums = new ProjectChecksums(myDataStorageRoot, myTargetsState, projectRootFile);
+    myChecksums = new ProjectChecksums(myDataStorageRoot, myTargetsState, relativator);
   }
 
   @Override

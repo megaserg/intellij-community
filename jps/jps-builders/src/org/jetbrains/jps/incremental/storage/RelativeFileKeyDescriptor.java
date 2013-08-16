@@ -19,6 +19,7 @@ import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.util.io.IOUtil;
 import com.intellij.util.io.KeyDescriptor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.jps.Relativator;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -30,34 +31,34 @@ import java.io.IOException;
  */
 public final class RelativeFileKeyDescriptor implements KeyDescriptor<File> {
   private final byte[] buffer = IOUtil.allocReadWriteUTFBuffer();
-  private File myProjectRootFile = null;
+  private Relativator myRelativator = null;
 
-  public RelativeFileKeyDescriptor(@NotNull File projectRootFile) {
-    myProjectRootFile = projectRootFile;
+  public RelativeFileKeyDescriptor(@NotNull Relativator relativator) {
+    myRelativator = relativator;
   }
 
   @Override
   public void save(DataOutput out, @NotNull File value) throws IOException {
-    String relativePath = FileUtil.getRelativePath(myProjectRootFile, value);
+    String relativePath = myRelativator.getRelativePath(value);
     IOUtil.writeUTFFast(buffer, out, relativePath);
   }
 
   @Override
   public File read(DataInput in) throws IOException {
-    String absolutePath = FileUtil.join(myProjectRootFile.getAbsolutePath(), IOUtil.readUTFFast(buffer, in));
+    String absolutePath = myRelativator.getAbsolutePath(IOUtil.readUTFFast(buffer, in));
     return new File(absolutePath);
   }
 
   @Override
   public int getHashCode(File value) {
-    String relativePath = FileUtil.getRelativePath(myProjectRootFile, value);
+    String relativePath = myRelativator.getRelativePath(value);
     return FileUtil.pathHashCode(relativePath);
   }
 
   @Override
   public boolean isEqual(File val1, File val2) {
-    String relativePath1 = FileUtil.getRelativePath(myProjectRootFile, val1);
-    String relativePath2 = FileUtil.getRelativePath(myProjectRootFile, val2);
+    String relativePath1 = myRelativator.getRelativePath(val1);
+    String relativePath2 = myRelativator.getRelativePath(val2);
     return FileUtil.pathsEqual(relativePath1, relativePath2);
   }
 }

@@ -22,11 +22,14 @@ import com.intellij.openapi.util.io.BufferExposingByteArrayOutputStream;
 import com.intellij.openapi.util.io.FileSystemUtil;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.ui.awt.RelativeRectangle;
 import com.intellij.util.concurrency.SequentialTaskExecutor;
 import com.intellij.util.io.DataOutputStream;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.Channels;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.Relativator;
+import org.jetbrains.jps.SingleRootRelativator;
 import org.jetbrains.jps.api.*;
 import org.jetbrains.jps.builders.*;
 import org.jetbrains.jps.builders.java.JavaModuleBuildTargetType;
@@ -98,7 +101,8 @@ final class BuildSession implements Runnable, CanceledStatus {
     myInitialFSDelta = delta;
     JpsModelLoaderImpl loader = new JpsModelLoaderImpl(myProjectPath, globalOptionsPath, null);
     myForceModelLoading = Boolean.parseBoolean(builderParams.get(BuildParametersKeys.FORCE_MODEL_LOADING));
-    myBuildRunner = new BuildRunner(loader, filePaths, builderParams, new File(myProjectPath));
+    Relativator relativator = new SingleRootRelativator(new File(myProjectPath)); //TODO(serebryakov): generify
+    myBuildRunner = new BuildRunner(loader, filePaths, builderParams, relativator);
   }
 
   public void run() {

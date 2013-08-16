@@ -16,6 +16,7 @@
 package org.jetbrains.jps.builders.artifacts.impl;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.builders.storage.StorageProvider;
 import org.jetbrains.jps.incremental.artifacts.ArtifactOutputToSourceMapping;
 
@@ -33,7 +34,7 @@ public class ArtifactOutToSourceStorageProvider extends StorageProvider<Artifact
 
   @NotNull
   @Override
-  public ArtifactOutputToSourceMapping createStorage(File targetDataDir, File projectRootFile) throws IOException {
-    return new ArtifactOutputToSourceMapping(new File(targetDataDir, "out-src" + File.separator + "data"), projectRootFile);
+  public ArtifactOutputToSourceMapping createStorage(File targetDataDir, Relativator relativator) throws IOException {
+    return new ArtifactOutputToSourceMapping(new File(targetDataDir, "out-src" + File.separator + "data"), relativator);
   }
 }

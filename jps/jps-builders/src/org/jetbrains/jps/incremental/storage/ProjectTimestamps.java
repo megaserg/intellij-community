@@ -17,6 +17,7 @@ package org.jetbrains.jps.incremental.storage;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.io.FileUtil;
+import org.jetbrains.jps.Relativator;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,9 +32,9 @@ public class ProjectTimestamps {
   private final TimestampStorage myTimestamps;
   private final File myTimestampsRoot;
 
-  public ProjectTimestamps(final File dataStorageRoot, BuildTargetsState targetsState, File projectRootFile) throws IOException {
+  public ProjectTimestamps(final File dataStorageRoot, BuildTargetsState targetsState, Relativator relativator) throws IOException {
     myTimestampsRoot = new File(dataStorageRoot, TIMESTAMP_STORAGE);
-    myTimestamps = new TimestampStorage(new File(myTimestampsRoot, "data"), targetsState, projectRootFile);
+    myTimestamps = new TimestampStorage(new File(myTimestampsRoot, "data"), targetsState, relativator);
   }
 
   public TimestampStorage getStorage() {

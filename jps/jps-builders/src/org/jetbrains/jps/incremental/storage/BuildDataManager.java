@@ -20,6 +20,7 @@ import com.intellij.openapi.util.AtomicNotNullLazyValue;
 import com.intellij.openapi.util.io.FileUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.builders.BuildTarget;
 import org.jetbrains.jps.builders.impl.BuildTargetChunk;
 import org.jetbrains.jps.builders.impl.storage.BuildTargetStorages;
@@ -52,7 +53,7 @@ public class BuildDataManager implements StorageOwner {
   private final ConcurrentMap<BuildTarget<?>, AtomicNotNullLazyValue<BuildTargetStorages>> myTargetStorages =
     new ConcurrentHashMap<BuildTarget<?>, AtomicNotNullLazyValue<BuildTargetStorages>>(16, 0.75f, CONCURRENCY_LEVEL);
 
-  private final File myProjectRootFile;
+  private final Relativator myRelativator;
 
   private final OneToManyRelativePathsMapping mySrcToFormMap;
   private final Mappings myMappings;
@@ -100,7 +101,7 @@ public class BuildDataManager implements StorageOwner {
         @Override
         protected SourceToOutputMappingImpl compute() {
           try {
-            return new SourceToOutputMappingImpl(new File(getSourceToOutputMapRoot(key), "data"), myProjectRootFile);
+            return new SourceToOutputMappingImpl(new File(getSourceToOutputMapRoot(key), "data"), myRelativator);
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -117,18 +118,18 @@ public class BuildDataManager implements StorageOwner {
         @NotNull
         @Override
         protected BuildTargetStorages compute() {
-          return new BuildTargetStorages(target, myDataPaths, myProjectRootFile);
+          return new BuildTargetStorages(target, myDataPaths, myRelativator);
         }
       };
     }
   };
 
-  public BuildDataManager(final BuildDataPaths dataPaths, BuildTargetsState targetsState, final boolean useMemoryTempCaches, File projectRootFile) throws IOException {
+  public BuildDataManager(final BuildDataPaths dataPaths, BuildTargetsState targetsState, final boolean useMemoryTempCaches, Relativator relativator) throws IOException {
     myDataPaths = dataPaths;
     myTargetsState = targetsState;
-    myProjectRootFile = projectRootFile;
-    mySrcToFormMap = new OneToManyRelativePathsMapping(new File(getSourceToFormsRoot(), "data"), projectRootFile);
-    myMappings = new Mappings(getMappingsRoot(), useMemoryTempCaches, projectRootFile);
+    myRelativator = relativator;
+    mySrcToFormMap = new OneToManyRelativePathsMapping(new File(getSourceToFormsRoot(), "data"), relativator);
+    myMappings = new Mappings(getMappingsRoot(), useMemoryTempCaches, relativator);
     myVersionFile = new File(myDataPaths.getDataStorageRoot(), "version.dat");
   }
 

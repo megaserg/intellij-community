@@ -20,6 +20,7 @@ import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.util.Processor;
 import com.intellij.util.SmartList;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.builders.*;
 import org.jetbrains.jps.builders.storage.BuildDataPaths;
 import org.jetbrains.jps.cmdline.ProjectDescriptor;
@@ -107,7 +108,7 @@ public class ArtifactBuildTarget extends BuildTarget<ArtifactRootDescriptor> {
   }
 
   @Override
-  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, File projectRootFile) {
+  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, Relativator relativator) {
     out.println(StringUtil.notNullize(myArtifact.getOutputPath()));
     final BuildRootIndex rootIndex = pd.getBuildRootIndex();
     for (ArtifactRootDescriptor descriptor : rootIndex.getTargetRoots(this, null)) {

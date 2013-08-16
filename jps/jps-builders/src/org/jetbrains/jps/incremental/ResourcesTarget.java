@@ -19,6 +19,7 @@ import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.util.SmartList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.api.GlobalOptions;
 import org.jetbrains.jps.builders.BuildRootIndex;
 import org.jetbrains.jps.builders.BuildTarget;
@@ -124,13 +125,13 @@ public final class ResourcesTarget extends JVMModuleBuildTarget<ResourceRootDesc
   }
 
   @Override
-  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, File projectRootFile) {
+  public void writeConfiguration(ProjectDescriptor pd, PrintWriter out, Relativator relativator) {
     int fingerprint = 0;
 
     final BuildRootIndex rootIndex = pd.getBuildRootIndex();
     final List<ResourceRootDescriptor> roots = rootIndex.getTargetRoots(this, null);
     for (ResourceRootDescriptor root : roots) {
-      String relativePath = FileUtil.getRelativePath(projectRootFile, root.getRootFile());
+      String relativePath = relativator.getRelativePath(root.getRootFile());
       fingerprint += FileUtil.pathHashCode(relativePath);
       fingerprint += root.getPackagePrefix().hashCode();
     }

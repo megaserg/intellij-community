@@ -17,6 +17,7 @@ package org.jetbrains.jps.incremental.storage;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.builders.storage.SourceToOutputMapping;
 
 import java.io.File;
@@ -31,8 +32,8 @@ import java.util.Iterator;
 public class SourceToOutputMappingImpl implements SourceToOutputMapping {
   private final OneToManyRelativePathsMapping myMapping;
 
-  public SourceToOutputMappingImpl(File storePath, File projectRootFile) throws IOException {
-    myMapping = new OneToManyRelativePathsMapping(storePath, projectRootFile);
+  public SourceToOutputMappingImpl(File storePath, Relativator relativator) throws IOException {
+    myMapping = new OneToManyRelativePathsMapping(storePath, relativator);
   }
 
   @Override

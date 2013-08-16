@@ -33,6 +33,7 @@ import gnu.trove.THashSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.ModuleChunk;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.TimingLog;
 import org.jetbrains.jps.api.CanceledStatus;
 import org.jetbrains.jps.api.GlobalOptions;
@@ -113,10 +114,10 @@ public class IncProjectBuilder {
   private final int myTotalModuleLevelBuilderCount;
   private final List<Future> myAsyncTasks = Collections.synchronizedList(new ArrayList<Future>());
 
-  private final File myProjectRootFile;
+  private final Relativator myRelativator;
 
   public IncProjectBuilder(ProjectDescriptor pd, BuilderRegistry builderRegistry, Map<String, String> builderParams, CanceledStatus cs,
-                           @Nullable Callbacks.ConstantAffectionResolver constantSearch, final boolean isTestMode, File projectRootFile) {
+                           @Nullable Callbacks.ConstantAffectionResolver constantSearch, final boolean isTestMode, Relativator relativator) {
     myProjectDescriptor = pd;
     myBuilderRegistry = builderRegistry;
     myBuilderParams = builderParams;
@@ -125,7 +126,7 @@ public class IncProjectBuilder {
     myTotalTargetsWork = pd.getBuildTargetIndex().getAllTargets().size();
     myTotalModuleLevelBuilderCount = builderRegistry.getModuleLevelBuilderCount();
     myIsTestMode = isTestMode;
-    myProjectRootFile = projectRootFile;
+    myRelativator = relativator;
   }
 
   public void addMessageHandler(MessageHandler handler) {
@@ -139,7 +140,7 @@ public class IncProjectBuilder {
       final BuildFSState fsState = myProjectDescriptor.fsState;
       for (BuildTarget<?> target : myProjectDescriptor.getBuildTargetIndex().getAllTargets()) {
         if (scope.isAffected(target)) {
-          BuildOperations.ensureFSStateInitialized(context, target, myProjectRootFile);
+          BuildOperations.ensureFSStateInitialized(context, target, myRelativator);
           final Map<BuildRootDescriptor, Set<File>> toRecompile = fsState.getSourcesToRecompile(context, target);
           //noinspection SynchronizationOnLocalVariableOrMethodParameter
           synchronized (toRecompile) {
@@ -826,7 +827,7 @@ public class IncProjectBuilder {
       Utils.ERRORS_DETECTED_KEY.set(context, Boolean.FALSE);
 
       for (BuildTarget<?> target : chunk.getTargets()) {
-        BuildOperations.ensureFSStateInitialized(context, target, myProjectRootFile);
+        BuildOperations.ensureFSStateInitialized(context, target, myRelativator);
       }
 
       doneSomething = processDeletedPaths(context, chunk.getTargets());
@@ -835,7 +836,7 @@ public class IncProjectBuilder {
 
       doneSomething |= runBuildersForChunk(context, chunk);
 
-      onChunkBuildComplete(context, chunk, myProjectRootFile);
+      onChunkBuildComplete(context, chunk, myRelativator);
 
       //if (doneSomething && GENERATE_CLASSPATH_INDEX) {
       //  myAsyncTasks.add(SharedThreadPool.getInstance().executeOnPooledThread(new Runnable() {
@@ -1146,13 +1147,13 @@ public class IncProjectBuilder {
     }
   }
 
-  private static void onChunkBuildComplete(CompileContext context, @NotNull BuildTargetChunk chunk, File projectRootFile) throws IOException {
+  private static void onChunkBuildComplete(CompileContext context, @NotNull BuildTargetChunk chunk, Relativator relativator) throws IOException {
     final ProjectDescriptor pd = context.getProjectDescriptor();
     final BuildFSState fsState = pd.fsState;
     fsState.clearContextRoundData(context);
     fsState.clearContextChunk(context);
 
-    BuildOperations.markTargetsUpToDate(context, chunk, projectRootFile);
+    BuildOperations.markTargetsUpToDate(context, chunk, relativator);
   }
 
   private static CompileContext createContextWrapper(final CompileContext delegate) {

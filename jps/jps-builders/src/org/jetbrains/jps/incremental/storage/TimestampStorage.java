@@ -18,6 +18,7 @@ package org.jetbrains.jps.incremental.storage;
 import com.intellij.util.ArrayUtil;
 import com.intellij.util.io.DataExternalizer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.jps.Relativator;
 import org.jetbrains.jps.builders.BuildTarget;
 
 import java.io.DataInput;
@@ -32,8 +33,8 @@ import java.io.IOException;
 public class TimestampStorage extends AbstractStateStorage<File, TimestampStorage.TimestampPerTarget[]> implements Timestamps {
   private final BuildTargetsState myTargetsState;
 
-  public TimestampStorage(File storePath, BuildTargetsState targetsState, File projectRootFile) throws IOException {
-    super(storePath, new RelativeFileKeyDescriptor(projectRootFile), new StateExternalizer());
+  public TimestampStorage(File storePath, BuildTargetsState targetsState, Relativator relativator) throws IOException {
+    super(storePath, new RelativeFileKeyDescriptor(relativator), new StateExternalizer());
     myTargetsState = targetsState;
   }
 
