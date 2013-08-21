@@ -1,8 +1,7 @@
-package org.jetbrains.jps.incremental.storage;
-
-import com.intellij.util.containers.HashSet;
+package com.intellij.compiler.treediff;
 
 import java.util.Collection;
+import java.util.HashSet;
 
 /**
  * @author Sergey Serebryakov
@@ -38,8 +37,24 @@ public class TreeDifferenceCollector {
     changedFiles.add(path);
   }
 
+  public Collection<String> getCreatedFiles() {
+    return createdFiles;
+  }
+
+  public Collection<String> getDeletedFiles() {
+    return deletedFiles;
+  }
+
+  public Collection<String> getChangedFiles() {
+    return changedFiles;
+  }
+
   @Override
   public String toString() {
     return "Created: " + createdFiles + "\n" + "Deleted: " + deletedFiles + "\n" + "Changed: " + changedFiles + "\n";
+  }
+
+  public String getSizes() {
+    return "Created: " + createdFiles.size() + ", deleted: " + deletedFiles.size() + ", changed: " + changedFiles.size();
   }
 }

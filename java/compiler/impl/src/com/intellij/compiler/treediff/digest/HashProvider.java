@@ -1,6 +1,4 @@
-package org.jetbrains.jps.incremental.storage;
-
-import org.jetbrains.annotations.Nullable;
+package com.intellij.compiler.treediff.digest;
 
 import java.security.MessageDigest;
 

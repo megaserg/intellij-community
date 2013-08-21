@@ -1,19 +1,21 @@
-package org.jetbrains.jps.incremental.storage;
+package com.intellij.compiler.treediff;
 
 import com.intellij.openapi.util.text.StringUtil;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Iterator;
 
+/**
+ * @author Sergey Serebryakov
+ */
 public class TreeComparator {
-  @Nullable
   private static <T> T safeNext(Iterator<T> i) {
     return i.hasNext() ? i.next() : null;
   }
 
   /**
    * Given two file trees and two corresponding hash trees, computes the difference between the directory structures and file contents.
+   * myTree is considered to be "new", yourTree is considered to be "old" (i.e. base revision).
    * On every call, it is assumed that the given node is present in both file trees.
    */
   public static void compare(final ProjectHashedFileTree myTree,
@@ -24,7 +26,9 @@ public class TreeComparator {
     String yourHash = yourTree.getHash(path);
 
     if (!myHash.equals(yourHash)) {
-      System.err.println("Different hashes: " + path);
+      if (Debug.DEBUG) {
+        System.err.println("Different hashes: " + path);
+      }
       if (myTree.hasFile(path) && yourTree.hasFile(path)) {
         collector.addChangedFile(path);
       }
@@ -39,13 +43,13 @@ public class TreeComparator {
 
         while (myChildName != null || yourChildName != null) {
           int compare = StringUtil.compare(myChildName, yourChildName, /*ignoreCase = */ false);
-          // Arguments can be null, it's OK as long as we don't use the result.
+          // Arguments can be null, it's OK because in this case we don't use the result of the comparison.
 
-          if (yourChildName == null || myChildName != null && compare == -1) {
+          if (yourChildName == null || myChildName != null && compare < 0) {
             collector.addCreatedFiles(myTree.listSubtree(myTree.getPathByName(path, myChildName)));
             myChildName = safeNext(myIterator);
           }
-          else if (myChildName == null || yourChildName != null && compare == 1) {
+          else if (myChildName == null || yourChildName != null && compare > 0) { // kept for symmetry sake
             collector.addDeletedFiles(yourTree.listSubtree(yourTree.getPathByName(path, yourChildName)));
             yourChildName = safeNext(yourIterator);
           }

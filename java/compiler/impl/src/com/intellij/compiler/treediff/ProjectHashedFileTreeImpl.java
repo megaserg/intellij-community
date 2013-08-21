@@ -1,6 +1,8 @@
-package org.jetbrains.jps.incremental.storage;
+package com.intellij.compiler.treediff;
 
-import org.jetbrains.annotations.NotNull;
+import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.compiler.treediff.mapstorage.PathToChildrenMapping;
+import com.intellij.compiler.treediff.mapstorage.PathToHashMapping;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,20 +21,19 @@ import java.util.TreeSet;
 // - Implement my own getNameByPath/getPathByName/getParent (although it might be OK to continue using new File())
 // - Reuse the same MessageDigest instance (as a singleton) - NB: always reset
 
-public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
+public class ProjectHashedFileTreeImpl extends ProjectHashedFileTree {
   private static final String ROOT_DIRECTORY = ".";
   private static final String INITIAL_DIRECTORY_HASH = "initial_directory_hash";
   private int nodesCount = 0;
   private int directoriesCount = 0;
-
   //private Map<String, String> hashes = new HashMap<String, String>(); // maps (path) to (hash)
-  //private Map<String, SortedSet<String>> tree = new HashMap<String, SortedSet<String>>(); // maps (directory path) to (sorted set of children paths)
-  private PathToStringMapping hashes;
+  //private Map<String, SortedSet<String>> tree = new HashMap<String, SortedSet<String>>(); // maps (directory path) to (sorted set of children names)
+  private PathToHashMapping hashes;
   private PathToChildrenMapping tree;
 
-  public ProjectHashedFileTreeImpl(@NotNull File dataStorageDirectory) throws IOException {
-    hashes = new PathToStringMapping(new File(dataStorageDirectory, "hashes"));
-    tree = new PathToChildrenMapping(new File(dataStorageDirectory, "tree"));
+  public ProjectHashedFileTreeImpl(File dataStorageDirectory, String prefix) {
+    hashes = new PathToHashMapping(new File(dataStorageDirectory, getHashesFileName(prefix)));
+    tree = new PathToChildrenMapping(new File(dataStorageDirectory, getTreeFileName(prefix)));
 
     hashes.put(ROOT_DIRECTORY, INITIAL_DIRECTORY_HASH);
     tree.put(ROOT_DIRECTORY, new TreeSet<String>());
@@ -40,7 +41,22 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
     directoriesCount = 1;
   }
 
-  @NotNull
+  private static String getNameByPath(String path) {
+    return new File(path).getName();
+  }
+
+  public void load() throws IOException {
+    hashes.load();
+    tree.load();
+    nodesCount = hashes.size();
+    directoriesCount = tree.size();
+  }
+
+  public void save() throws IOException {
+    hashes.save();
+    tree.save();
+  }
+
   private Collection<String> getChildrenSet(String dirPath) {
     if (Debug.DEBUG && !hasDirectory(dirPath)) {
       throw new RuntimeException("Cannot get children of a non-existent directory " + dirPath);
@@ -48,29 +64,28 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
     return tree.get(dirPath);
   }
 
-  @NotNull
   private String getParent(String path) {
     if (Debug.DEBUG && !hasNode(path)) {
       throw new RuntimeException("Cannot get parent of a non-existent path " + path);
     }
     //return nodes.get(path);
-    return new File(path).getParent();
+    return FileUtil.toSystemIndependentName(new File(path).getParent());
   }
 
   private void addChild(String parent, String child) {
     if (Debug.DEBUG && !hasDirectory(parent)) {
       throw new RuntimeException("Cannot add child to a non-existent directory " + parent);
     }
-    tree.appendChild(parent, child);
-    //tree.get(parent).add(child);
+    //tree.appendChild(parent, child);
+    tree.get(parent).add(child);
   }
 
   private void removeChild(String parent, String child) {
     if (Debug.DEBUG && !hasDirectory(parent)) {
       throw new RuntimeException("Cannot remove child from a non-existent directory " + parent);
     }
-    tree.removeChild(parent, child);
-    //tree.get(parent).remove(child);
+    //tree.removeChild(parent, child);
+    tree.get(parent).remove(child);
   }
 
   private boolean hasNode(String path) {
@@ -79,22 +94,18 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
 
   @Override
   public boolean hasDirectory(String path) {
+    path = FileUtil.toSystemIndependentName(path);
     return /*hasNode(path) && */tree.containsKey(path);
   }
 
   @Override
   public boolean hasFile(String path) {
+    path = FileUtil.toSystemIndependentName(path);
     return hasNode(path) && !tree.containsKey(path);
   }
 
-  @NotNull
-  private String getNameByPath(String path) {
-    return new File(path).getName();
-  }
-
-  @NotNull
   public String getPathByName(String parentPath, String name) {
-    return new File(parentPath, name).getPath();
+    return FileUtil.toSystemIndependentName(new File(parentPath, name).getPath());
   }
 
   private void addNode(String path, String parentPath, String hash) {
@@ -121,6 +132,8 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
 
   @Override
   public void addDirectory(String path, String parentPath, String hash) {
+    path = FileUtil.toSystemIndependentName(path);
+    parentPath = FileUtil.toSystemIndependentName(parentPath);
     addNode(path, parentPath, hash);
     tree.put(path, new TreeSet<String>());
     directoriesCount++;
@@ -133,11 +146,14 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
 
   @Override
   public void addFile(String path, String parentPath, String hash) {
+    path = FileUtil.toSystemIndependentName(path);
+    parentPath = FileUtil.toSystemIndependentName(parentPath);
     addNode(path, parentPath, hash);
   }
 
   @Override
   public void removeSubtree(String path) {
+    path = FileUtil.toSystemIndependentName(path);
     if (hasDirectory(path)) {
       Collection<String> childrenNames = getSortedCopyOfChildrenNames(path); // can't iterate over the changing set
       for (String childName : childrenNames) {
@@ -150,9 +166,9 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
     removeNode(path);
   }
 
-  @NotNull
   @Override
   public Collection<String> getSortedCopyOfChildrenNames(String dirPath) {
+    dirPath = FileUtil.toSystemIndependentName(dirPath);
     return new TreeSet<String>(getChildrenSet(dirPath));
   }
 
@@ -166,17 +182,17 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
     }
   }
 
-  @NotNull
   @Override
   public Collection<String> listSubtree(String path) {
+    path = FileUtil.toSystemIndependentName(path);
     Collection<String> result = new LinkedList<String>();
     accumulateSubtree(path, result);
     return result;
   }
 
-  @NotNull
   @Override
   public String getHash(String path) {
+    path = FileUtil.toSystemIndependentName(path);
     if (Debug.DEBUG && !hasNode(path)) {
       throw new RuntimeException("Cannot get hash for non-existent path " + path);
     }
@@ -189,6 +205,7 @@ public class ProjectHashedFileTreeImpl implements ProjectHashedFileTree {
 
   @Override
   public void updateHash(String path, String hash) {
+    path = FileUtil.toSystemIndependentName(path);
     if (Debug.DEBUG && !hasNode(path)) {
       throw new RuntimeException("Cannot update hash for non-existent path " + path);
     }

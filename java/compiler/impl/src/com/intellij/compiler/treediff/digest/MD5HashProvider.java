@@ -1,9 +1,5 @@
-package org.jetbrains.jps.incremental.storage;
+package com.intellij.compiler.treediff.digest;
 
-import com.intellij.openapi.util.text.StringUtil;
-import org.jetbrains.annotations.Nullable;
-
-import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 

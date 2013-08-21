@@ -1,8 +1,9 @@
-package org.jetbrains.jps.incremental.storage;
+package com.intellij.compiler.treediff;
 
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.StringUtil;
-import org.jetbrains.annotations.NotNull;
+import com.intellij.compiler.treediff.digest.HashProvider;
+import com.intellij.compiler.treediff.digest.SHA1HashProvider;
 
 import java.io.*;
 import java.security.MessageDigest;
@@ -12,7 +13,7 @@ import java.security.MessageDigest;
  */
 public class TreeActualizer {
   private HashProvider myHashProvider;
-  private byte[] buffer = new byte[1024*50];
+  private byte[] buffer = new byte[1024 * 50];
 
   public TreeActualizer() {
     this(new SHA1HashProvider());
@@ -34,7 +35,7 @@ public class TreeActualizer {
     return StringUtil.toHexString(md.digest());
   }
 
-  private String hashFileContent(@NotNull File f) throws IOException {
+  private String hashFileContent(File f) throws IOException {
     InputStream fis = new FileInputStream(f);
 
     try {
@@ -50,7 +51,7 @@ public class TreeActualizer {
     }
   }
 
-  private String hashFile(@NotNull final File file) throws IOException {
+  private String hashFile(final File file) throws IOException {
     if (Debug.DEBUG && file.isDirectory()) {
       throw new RuntimeException("Cannot hash a directory " + file + " as a file");
     }
@@ -65,9 +66,7 @@ public class TreeActualizer {
    * Recalculates the hash of the given directory using hashes from the hash tree.
    * Assumes the given path to be relative to the project root.
    */
-  private String hashDirectory(@NotNull final ProjectHashedFileTree tree,
-                               @NotNull final File dir,
-                               @NotNull final String path) throws IOException {
+  private String hashDirectory(final ProjectHashedFileTree tree, final File dir, final String path) throws IOException {
     if (Debug.DEBUG && !dir.isDirectory()) {
       throw new RuntimeException("Cannot hash a file " + dir + " as a directory");
     }
@@ -91,10 +90,8 @@ public class TreeActualizer {
    *
    * @return Whether the corresponding node was updated.
    */
-  public boolean actualize(@NotNull final File projectRoot,
-                           @NotNull final ProjectHashedFileTree tree,
-                           @NotNull final String path,
-                           @NotNull final String parentPath) throws IOException {
+  public boolean actualize(final File projectRoot, final ProjectHashedFileTree tree, final String path, final String parentPath)
+    throws IOException {
     File file = new File(projectRoot, path);
 
     if (file.isDirectory()) {
@@ -111,7 +108,7 @@ public class TreeActualizer {
         }
       }
       else {
-        if (tree.hasFile(path)) {// get rid of a file/directory mismatch
+        if (tree.hasFile(path)) { // get rid of a file/directory mismatch
           tree.removeSubtree(path);
         }
         tree.addDirectoryWithoutHash(path, parentPath);
@@ -132,7 +129,7 @@ public class TreeActualizer {
 
       if (rehashingNeeded) {
         // The directory was just added or some of its children were removed or actualized.
-        // We assume here that all actual children are actualized, i.e. are present in both trees and have updated hashes.
+        // We assume here that the subtree is actualized, i.e. all actual children are present in the tree and have updated hashes.
         String actualHash = hashDirectory(tree, file, path);
         tree.updateHash(path, actualHash);
         return true;
