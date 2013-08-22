@@ -273,6 +273,10 @@
 
     <!-- Application Configurables -->
 
+    <applicationConfigurable instance="com.intellij.compiler.remote.RemoteCacheStorageConfigurable" />
+    <applicationService serviceInterface="com.intellij.compiler.remote.RemoteCacheStorageSettings"
+                        serviceImplementation="com.intellij.compiler.remote.RemoteCacheStorageSettings"/>
+
     <!-- Path Variables -->
     <!-- the implementation of this configurable is in platform-impl but it's not registered in platform because
          it's only required in full IDEA -->

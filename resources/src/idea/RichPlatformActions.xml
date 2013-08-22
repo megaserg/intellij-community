@@ -102,6 +102,9 @@
       <separator/>
       <action id="CompileProject" class="com.intellij.compiler.actions.CompileProjectAction"/>
       <separator/>
+      <action id="UploadCache" class="com.intellij.compiler.remote.UploadCacheAction"/>
+      <action id="DownloadCache" class="com.intellij.compiler.remote.DownloadCacheAction"/>
+      <separator/>
       <action id="GenerateAntBuild" class="com.intellij.compiler.actions.GenerateAntBuildAction"/>
       <separator/>
       <action id="BuildArtifact" class="com.intellij.compiler.actions.BuildArtifactAction"/>

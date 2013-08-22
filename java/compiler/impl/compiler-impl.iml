@@ -27,6 +27,8 @@
     <orderEntry type="module" module-name="testFramework-java" scope="TEST" />
     <orderEntry type="module" module-name="jps-model-impl" />
     <orderEntry type="module" module-name="java-analysis-impl" />
+    <orderEntry type="library" name="commons-net" level="project" />
+    <orderEntry type="library" name="JSch" level="project" />
   </component>
   <component name="copyright">
     <Base>
