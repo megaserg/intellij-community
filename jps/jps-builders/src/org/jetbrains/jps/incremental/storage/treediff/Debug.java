@@ -1,4 +1,4 @@
-package com.intellij.compiler.treediff;
+package org.jetbrains.jps.incremental.storage.treediff;
 
 /**
  * @author Sergey Serebryakov

@@ -1,4 +1,4 @@
-package com.intellij.compiler.treediff.digest;
+package org.jetbrains.jps.incremental.storage.treediff.digest;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

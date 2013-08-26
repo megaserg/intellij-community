@@ -1,8 +1,8 @@
-package com.intellij.compiler.treediff;
+package org.jetbrains.jps.incremental.storage.treediff;
 
 import com.intellij.openapi.util.io.FileUtil;
-import com.intellij.compiler.treediff.mapstorage.PathToChildrenMapping;
-import com.intellij.compiler.treediff.mapstorage.PathToHashMapping;
+import org.jetbrains.jps.incremental.storage.treediff.mapstorage.PathToChildrenMapping;
+import org.jetbrains.jps.incremental.storage.treediff.mapstorage.PathToHashMapping;
 
 import java.io.File;
 import java.io.IOException;

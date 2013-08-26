@@ -1,9 +1,9 @@
-package com.intellij.compiler.treediff;
+package org.jetbrains.jps.incremental.storage.treediff;
 
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.util.text.StringUtil;
-import com.intellij.compiler.treediff.digest.HashProvider;
-import com.intellij.compiler.treediff.digest.SHA1HashProvider;
+import org.jetbrains.jps.incremental.storage.treediff.digest.HashProvider;
+import org.jetbrains.jps.incremental.storage.treediff.digest.SHA1HashProvider;
 
 import java.io.*;
 import java.security.MessageDigest;

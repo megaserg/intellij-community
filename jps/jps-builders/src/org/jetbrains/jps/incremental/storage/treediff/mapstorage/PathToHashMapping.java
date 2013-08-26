@@ -13,29 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.intellij.compiler.treediff.mapstorage;
+package org.jetbrains.jps.incremental.storage.treediff.mapstorage;
 
 import com.intellij.openapi.util.io.FileUtil;
 
 import java.io.File;
-import java.util.Collection;
 
 /**
  * @author Sergey Serebryakov
  */
-public class PathToChildrenMapping extends SynchronizedHashMapStorage<String, Collection<String>> {
+public class PathToHashMapping extends SynchronizedHashMapStorage<String, String> {
 
-  public PathToChildrenMapping(File storePath) {
+  public PathToHashMapping(File storePath) {
     super(storePath);
   }
 
   @Override
-  public void put(String path, Collection<String> children) {
-    super.put(FileUtil.toSystemIndependentName(path), children);
+  public void put(String path, String value) {
+    super.put(FileUtil.toSystemIndependentName(path), value);
   }
 
   @Override
-  public Collection<String> get(String path) {
+  public String get(String path) {
     return super.get(FileUtil.toSystemIndependentName(path));
   }
 
@@ -48,4 +47,6 @@ public class PathToChildrenMapping extends SynchronizedHashMapStorage<String, Co
   public void remove(String path) {
     super.remove(FileUtil.toSystemIndependentName(path));
   }
+
 }
+

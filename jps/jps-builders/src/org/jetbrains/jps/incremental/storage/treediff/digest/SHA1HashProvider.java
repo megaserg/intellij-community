@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.intellij.compiler.treediff.digest;
+package org.jetbrains.jps.incremental.storage.treediff.digest;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
