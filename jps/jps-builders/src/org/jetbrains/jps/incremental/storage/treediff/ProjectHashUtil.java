@@ -37,10 +37,10 @@ public class ProjectHashUtil {
       // or some other error otherwise
     }
 
-    TreeActualizer a = new TreeActualizer();
+    TreeActualizer actualizer = new TreeActualizer();
     try {
       long startActualize = System.currentTimeMillis();
-      a.actualize(actualDirectoryFile, tree, ".", ".");
+      actualizer.actualize(actualDirectoryFile, tree, ".", ".");
       long finishActualize = System.currentTimeMillis();
       logTimeConsumed("Actualizing hashtree: ", actualDirectoryFile.toString(), (finishActualize - startActualize));
     }
@@ -109,7 +109,7 @@ public class ProjectHashUtil {
     return true;
   }
 
-  private static boolean compare(File oldStorageDirectoryFile,
+  public static boolean compare(File oldStorageDirectoryFile,
                                  String oldStorageFilesPrefix,
                                  File newStorageDirectoryFile,
                                  String newStorageFilesPrefix,
@@ -169,11 +169,11 @@ public class ProjectHashUtil {
     return true;
   }
 
-  private static boolean apply(String zipFilePath,
+  public static boolean apply(String zipFilePath,
                                File actualDirectoryFile,
                                TreeDifferenceCollector diff) {
     File zipFile = new File(zipFilePath);
-    if (!zipFile.exists()) {
+    if (!zipFile.exists() && diff.hasCreatedOrChanged()) {
       LOG.info("Missing zip file: " + zipFilePath);
       return false;
     }

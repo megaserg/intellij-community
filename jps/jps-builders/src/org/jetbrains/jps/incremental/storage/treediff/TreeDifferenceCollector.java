@@ -49,6 +49,14 @@ public class TreeDifferenceCollector {
     return changedFiles;
   }
 
+  public boolean isEmpty() {
+    return createdFiles.size() + deletedFiles.size() + changedFiles.size() == 0;
+  }
+
+  public boolean hasCreatedOrChanged() {
+    return createdFiles.size() + changedFiles.size() > 0;
+  }
+
   @Override
   public String toString() {
     return "Created: " + createdFiles + "\n" + "Deleted: " + deletedFiles + "\n" + "Changed: " + changedFiles + "\n";

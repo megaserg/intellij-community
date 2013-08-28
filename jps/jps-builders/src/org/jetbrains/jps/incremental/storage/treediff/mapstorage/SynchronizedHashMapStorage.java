@@ -28,7 +28,9 @@ public abstract class SynchronizedHashMapStorage<Key, Value> {
 
   public SynchronizedHashMapStorage(File storePath) {
     myStorePath = storePath;
-    myMap = new HashMap<Key, Value>();
+    synchronized (myDataLock) {
+      myMap = new HashMap<Key, Value>();
+    }
   }
 
   public void put(Key key, Value value) {
@@ -62,19 +64,29 @@ public abstract class SynchronizedHashMapStorage<Key, Value> {
   }
 
   public void save() throws IOException {
-    ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(myStorePath));
-    out.writeObject(myMap);
-    out.close();
+    ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(myStorePath));
+    try {
+      synchronized (myDataLock) {
+        oos.writeObject(myMap);
+      }
+    }
+    finally {
+      oos.close();
+    }
   }
 
   public void load() throws IOException {
     ObjectInputStream in = new ObjectInputStream(new FileInputStream(myStorePath));
     try {
-      myMap = (HashMap<Key, Value>)in.readObject();
+      synchronized (myDataLock) {
+        myMap = (HashMap<Key, Value>)in.readObject();
+      }
     }
     catch (ClassNotFoundException e) {
       System.err.println("No HashMap? Really?");
     }
-    in.close();
+    finally {
+      in.close();
+    }
   }
 }

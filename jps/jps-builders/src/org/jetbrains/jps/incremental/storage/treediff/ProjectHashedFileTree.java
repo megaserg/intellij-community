@@ -7,15 +7,15 @@ import java.util.Collection;
  * @author Sergey Serebryakov
  */
 public abstract class ProjectHashedFileTree {
-  private static String HASHES_FILE_EXTENSION = "hashes";
-  private static String TREE_FILE_EXTENSION = "tree";
+  private static final String HASHES_FILE_EXTENSION = ".hashes";
+  private static final String TREE_FILE_EXTENSION = ".tree";
 
   public static String getHashesFileName(String prefix) {
-    return prefix + "." + HASHES_FILE_EXTENSION;
+    return prefix + HASHES_FILE_EXTENSION;
   }
 
   public static String getTreeFileName(String prefix) {
-    return prefix + "." + TREE_FILE_EXTENSION;
+    return prefix + TREE_FILE_EXTENSION;
   }
 
   /**

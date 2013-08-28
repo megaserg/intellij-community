@@ -94,6 +94,10 @@ public class TreeActualizer {
     throws IOException {
     File file = new File(projectRoot, path);
 
+    if (!file.exists()) {
+      return true;
+    }
+
     if (file.isDirectory()) {
       boolean rehashingNeeded = false;
 
@@ -157,45 +161,6 @@ public class TreeActualizer {
     }
   }
 
-  /**
-  * We want to actualize the tree when it's known that only a certain subtree has changed.
-  */
-  /*public void actualizeFromBottom(File projectRoot, final ProjectHashedFileTree tree, String path) throws IOException {
-    projectRoot = new File(FileUtil.toCanonicalPath(projectRoot.getPath()));
-    path = FileUtil.toCanonicalPath(path);
-
-    File file = new File(projectRoot, path);
-    File parent = FileUtil.getParentFile(file);
-    String parentPath = FileUtil.getRelativePath(projectRoot.getAbsolutePath(), parent.getAbsolutePath(), File.separatorChar);
-
-    actualize(projectRoot, tree, path, parentPath);
-
-    if (!file.isDirectory()) {
-      file = parent;
-      path = parentPath;
-      parent = FileUtil.getParentFile(file);
-      parentPath = FileUtil.getRelativePath(projectRoot.getAbsolutePath(), parent.getAbsolutePath(), File.separatorChar);
-    }
-
-    // At this point, file.isDirectory() is true.
-    while (!FileUtil.filesEqual(file, projectRoot)) {
-      if (!tree.hasDirectory(path)) {
-        if (tree.hasFile(path)) { // get rid of a file/directory mismatch
-          tree.removeSubtree(path);
-        }
-        tree.addDirectoryWithoutHash(path, parentPath);
-      }
-
-      String actualHash = hashDirectory(tree, file, path);
-      tree.updateHash(path, actualHash);
-
-      file = parent;
-      path = parentPath;
-      parent = FileUtil.getParentFile(file);
-      parentPath = FileUtil.getRelativePath(projectRoot.getAbsolutePath(), parent.getAbsolutePath(), File.separatorChar);
-    }
-  }*/
-
   private void actualizeSinglePath(File projectRoot, ProjectHashedFileTree tree, String pathToUpdate, String currentPath, String parentPath)
     throws IOException {
     File file = new File(projectRoot, currentPath);
@@ -219,6 +184,10 @@ public class TreeActualizer {
     }
     String nextPath = FileUtil.toSystemIndependentName(new File(currentPath, nextName).getPath());
 
+    if (!file.exists()) {
+      return;
+    }
+    
     if (file.isDirectory()) {
       if (!tree.hasDirectory(currentPath)) {
         if (tree.hasFile(currentPath)) {
@@ -232,9 +201,9 @@ public class TreeActualizer {
       tree.updateHash(currentPath, actualHash);
     }
     else {
-      // If currentPath points to a file, the pathToUpdate should have been empty and we should have caught this before.
-      // Therefore, we never reach this branch.
-      throw new RuntimeException("Error: reached unreachable branch");
+      // If currentPath points to an existing file which isn't directory, the pathToUpdate is empty and we have caught this before.
+      // Therefore, this branch is unreachable.
+      throw new RuntimeException("Reached unreachable branch");
     }
   }
 
