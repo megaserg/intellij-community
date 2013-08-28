@@ -86,7 +86,7 @@ public class TreeActualizer {
   /**
    * We want to actualize the trees with the actual version of the given path and its subtree.
    * The given path is assumed to be present in the current actual disk storage.
-   * The given file tree and hash tree are to be updated.
+   * The given hashed filetree is to be updated.
    *
    * @return Whether the corresponding node was updated.
    */
@@ -155,5 +155,99 @@ public class TreeActualizer {
         return true;
       }
     }
+  }
+
+  /**
+  * We want to actualize the tree when it's known that only a certain subtree has changed.
+  */
+  /*public void actualizeFromBottom(File projectRoot, final ProjectHashedFileTree tree, String path) throws IOException {
+    projectRoot = new File(FileUtil.toCanonicalPath(projectRoot.getPath()));
+    path = FileUtil.toCanonicalPath(path);
+
+    File file = new File(projectRoot, path);
+    File parent = FileUtil.getParentFile(file);
+    String parentPath = FileUtil.getRelativePath(projectRoot.getAbsolutePath(), parent.getAbsolutePath(), File.separatorChar);
+
+    actualize(projectRoot, tree, path, parentPath);
+
+    if (!file.isDirectory()) {
+      file = parent;
+      path = parentPath;
+      parent = FileUtil.getParentFile(file);
+      parentPath = FileUtil.getRelativePath(projectRoot.getAbsolutePath(), parent.getAbsolutePath(), File.separatorChar);
+    }
+
+    // At this point, file.isDirectory() is true.
+    while (!FileUtil.filesEqual(file, projectRoot)) {
+      if (!tree.hasDirectory(path)) {
+        if (tree.hasFile(path)) { // get rid of a file/directory mismatch
+          tree.removeSubtree(path);
+        }
+        tree.addDirectoryWithoutHash(path, parentPath);
+      }
+
+      String actualHash = hashDirectory(tree, file, path);
+      tree.updateHash(path, actualHash);
+
+      file = parent;
+      path = parentPath;
+      parent = FileUtil.getParentFile(file);
+      parentPath = FileUtil.getRelativePath(projectRoot.getAbsolutePath(), parent.getAbsolutePath(), File.separatorChar);
+    }
+  }*/
+
+  private void actualizeSinglePath(File projectRoot, ProjectHashedFileTree tree, String pathToUpdate, String currentPath, String parentPath)
+    throws IOException {
+    File file = new File(projectRoot, currentPath);
+
+    if (pathToUpdate.isEmpty()) {
+      // now currentPath is the path to the initial file
+      actualize(projectRoot, tree, currentPath, parentPath);
+      return;
+    }
+
+    // We chop off the first directory name (prefix up to the first slash) from pathToUpdate and append it to currentPath to get nextPath.
+    int slashPosition = pathToUpdate.indexOf("/");
+    String nextName = null;
+    if (slashPosition == -1) {
+      nextName = pathToUpdate;
+      pathToUpdate = "";
+    }
+    else {
+      nextName = pathToUpdate.substring(0, slashPosition);
+      pathToUpdate = pathToUpdate.substring(slashPosition+1);
+    }
+    String nextPath = FileUtil.toSystemIndependentName(new File(currentPath, nextName).getPath());
+
+    if (file.isDirectory()) {
+      if (!tree.hasDirectory(currentPath)) {
+        if (tree.hasFile(currentPath)) {
+          tree.removeSubtree(currentPath);
+        }
+        tree.addDirectoryWithoutHash(currentPath, parentPath);
+      }
+
+      actualizeSinglePath(projectRoot, tree, pathToUpdate, nextPath, currentPath);
+      String actualHash = hashDirectory(tree, file, currentPath);
+      tree.updateHash(currentPath, actualHash);
+    }
+    else {
+      // If currentPath points to a file, the pathToUpdate should have been empty and we should have caught this before.
+      // Therefore, we never reach this branch.
+      throw new RuntimeException("Error: reached unreachable branch");
+    }
+  }
+
+  public void actualizeWhenSingleFileGenerated(File projectRoot, ProjectHashedFileTree tree, String pathToUpdate) throws IOException {
+    pathToUpdate = FileUtil.toSystemIndependentName(FileUtil.toCanonicalPath(pathToUpdate));
+    actualizeSinglePath(projectRoot, tree, pathToUpdate, ".", ".");
+  }
+
+  public void actualizeWhenSingleFileDeleted(File projectRoot, ProjectHashedFileTree tree, String pathToDelete) throws IOException {
+    pathToDelete = FileUtil.toSystemIndependentName(FileUtil.toCanonicalPath(pathToDelete));
+
+    // To register that a file has been deleted, we should just update the record for its parent directory.
+    String pathToUpdate = FileUtil.toSystemIndependentName(FileUtil.getParentFile(new File(pathToDelete)).getPath());
+    actualizeSinglePath(projectRoot, tree, pathToUpdate, ".", ".");
   }
 }

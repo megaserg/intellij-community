@@ -173,12 +173,14 @@ public class ProjectHashedFileTreeImpl extends ProjectHashedFileTree {
   }
 
   private void accumulateSubtree(String path, Collection<String> result) {
-    result.add(path);
     if (hasDirectory(path)) {
       for (String childName : getSortedCopyOfChildrenNames(path)) {
         String childPath = getPathByName(path, childName);
         accumulateSubtree(childPath, result);
       }
+    }
+    else {
+      result.add(path);
     }
   }
 

@@ -21,54 +21,54 @@ public abstract class ProjectHashedFileTree {
   /**
    * Whether the given node is a (possibly empty) directory.
    */
-  abstract boolean hasDirectory(String path);
+  public abstract boolean hasDirectory(String path);
 
   /**
    * Whether the given node is a file.
    */
-  abstract boolean hasFile(String path);
+  public abstract boolean hasFile(String path);
 
-  abstract void addDirectoryWithoutHash(String path, String parentPath);
+  public abstract void addDirectoryWithoutHash(String path, String parentPath);
 
-  abstract void addDirectory(String path, String parentPath, String hash);
+  public abstract void addDirectory(String path, String parentPath, String hash);
 
-  abstract void addFile(String path, String parentPath, String hash);
+  public abstract void addFile(String path, String parentPath, String hash);
 
   /**
    * Removes the whole subtree of the given node, including the given node itself.
    * Applicable both to directory and file node.
    */
-  abstract void removeSubtree(String path);
+  public abstract void removeSubtree(String path);
 
-  abstract String getPathByName(String parentPath, String name);
+  public abstract String getPathByName(String parentPath, String name);
 
   /**
    * Returns names of the immediate children of the given node.
    * The given node is assumed to be a directory.
    */
-  abstract Collection<String> getSortedCopyOfChildrenNames(String dirPath);
+  public abstract Collection<String> getSortedCopyOfChildrenNames(String dirPath);
 
   /**
-   * Returns paths of all nodes in the subtree of the given node, including the given node itself.
+   * Returns paths of all *file* nodes in the subtree of the given node, including the given node itself.
    * Applicable both to directory and file node, in the latter case the result contains only one record.
    */
-  abstract Collection<String> listSubtree(String path);
+  public abstract Collection<String> listSubtree(String path);
 
-  abstract String getHash(String path);
+  public abstract String getHash(String path);
 
-  abstract void updateHash(String path, String hash);
+  public abstract void updateHash(String path, String hash);
 
   /**
    * @return The total number of nodes in the tree.
    */
-  abstract int nodesCount();
+  public abstract int nodesCount();
 
   /**
    * @return The total number of directories in the tree.
    */
-  abstract int directoriesCount();
+  public abstract int directoriesCount();
 
-  abstract void save() throws IOException;
+  public abstract void save() throws IOException;
 
-  abstract void load() throws IOException;
+  public abstract void load() throws IOException;
 }

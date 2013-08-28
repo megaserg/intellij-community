@@ -28,8 +28,16 @@ public class ProjectHashUtil {
     }
 
     ProjectHashedFileTree tree = new ProjectHashedFileTreeImpl(storageDirectoryFile, storageFilesPrefix);
-    TreeActualizer a = new TreeActualizer();
 
+    try {
+      tree.load();
+    }
+    catch (IOException e) {
+      // should be FileNotFoundException if no hashtree yet
+      // or some other error otherwise
+    }
+
+    TreeActualizer a = new TreeActualizer();
     try {
       long startActualize = System.currentTimeMillis();
       a.actualize(actualDirectoryFile, tree, ".", ".");
@@ -91,6 +99,21 @@ public class ProjectHashUtil {
                                          String newStorageFilesPrefix,
                                          String zipFilePath,
                                          File actualDirectoryFile) {
+    TreeDifferenceCollector collector = new TreeDifferenceCollector();
+    if (!compare(oldStorageDirectoryFile, oldStorageFilesPrefix, newStorageDirectoryFile, newStorageFilesPrefix, collector)) {
+      return false;
+    }
+    if (!apply(zipFilePath, actualDirectoryFile, collector)) {
+      return false;
+    }
+    return true;
+  }
+
+  private static boolean compare(File oldStorageDirectoryFile,
+                                 String oldStorageFilesPrefix,
+                                 File newStorageDirectoryFile,
+                                 String newStorageFilesPrefix,
+                                 TreeDifferenceCollector diff) {
     if (!oldStorageDirectoryFile.exists() || !oldStorageDirectoryFile.isDirectory()) {
       LOG.info("Missing storage directory: " + oldStorageDirectoryFile);
       return false;
@@ -101,29 +124,38 @@ public class ProjectHashUtil {
       return false;
     }
 
-    File zipFile = new File(zipFilePath);
-    if (!zipFile.exists()) {
-      LOG.info("Missing zip file: " + zipFilePath);
-      return false;
-    }
-
     ProjectHashedFileTree oldTree = new ProjectHashedFileTreeImpl(oldStorageDirectoryFile, oldStorageFilesPrefix);
     ProjectHashedFileTree newTree = new ProjectHashedFileTreeImpl(newStorageDirectoryFile, newStorageFilesPrefix);
 
+    long startLoad = System.currentTimeMillis();
+
     try {
-      long startLoad = System.currentTimeMillis();
       oldTree.load();
-      newTree.load();
-      long finishLoad = System.currentTimeMillis();
-      logTimeConsumed("Loading hashtrees: ", (finishLoad - startLoad));
+    }
+    catch (FileNotFoundException ignored) {
+      // no hashtree file exists, an empty hashtree is created
     }
     catch (IOException e) {
       LOG.info("IOException while loading a hashtree", e);
       return false;
     }
 
+    try {
+      newTree.load();
+    }
+    catch (FileNotFoundException ignored) {
+      // no hashtree file exists, an empty hashtree is created
+    }
+    catch (IOException e) {
+      LOG.info("IOException while loading a hashtree", e);
+      return false;
+    }
+
+    long finishLoad = System.currentTimeMillis();
+    logTimeConsumed("Loading hashtrees: ", (finishLoad - startLoad));
+
+
     long startCompare = System.currentTimeMillis();
-    TreeDifferenceCollector diff = new TreeDifferenceCollector();
     TreeComparator.compare(newTree, oldTree, diff, ".");
     long finishCompare = System.currentTimeMillis();
     logTimeConsumed("Comparing hashtrees: ", (finishCompare - startCompare));
@@ -134,13 +166,25 @@ public class ProjectHashUtil {
       LOG.info(diff.toString());
     }
 
+    return true;
+  }
+
+  private static boolean apply(String zipFilePath,
+                               File actualDirectoryFile,
+                               TreeDifferenceCollector diff) {
+    File zipFile = new File(zipFilePath);
+    if (!zipFile.exists()) {
+      LOG.info("Missing zip file: " + zipFilePath);
+      return false;
+    }
+
     long startApply = System.currentTimeMillis();
     int changesCount = 0;
 
     for (String deleted : diff.getDeletedFiles()) {
       File deletedFile = new File(actualDirectoryFile, deleted);
       if (!deletedFile.exists()) {
-        //LOG.info("Comparator says " + deleted + " was deleted, but there was no file initially");
+        LOG.info("Comparator says " + deleted + " was deleted, but there was no file initially");
         continue;
       }
       if (!FileUtil.delete(deletedFile)) {
@@ -152,25 +196,17 @@ public class ProjectHashUtil {
     for (String created : diff.getCreatedFiles()) {
       File createdFile = new File(actualDirectoryFile, created);
       if (createdFile.exists()) {
-        //LOG.info("Comparator says " + created + " was created, but there was a file already");
+        LOG.info("Comparator says " + created + " was created, but there was a file already");
         continue;
       }
 
-      if (newTree.hasDirectory(created)) {
-        createdFile.mkdirs();
+      FileUtil.createIfDoesntExist(createdFile);
+      try {
+        String relativePath = FileUtil.toSystemIndependentName(created).replaceFirst("\\./", "");
+        copyFromZip(zipFilePath, actualDirectoryFile, relativePath);
       }
-      else if (newTree.hasFile(created)) {
-        FileUtil.createIfDoesntExist(createdFile);
-        try {
-          String relativePath = FileUtil.toSystemIndependentName(created).replaceFirst("\\./", "");
-          copyFromZip(zipFilePath, actualDirectoryFile, relativePath);
-        }
-        catch (IOException e) {
-          LOG.info("IOException while decompressing " + created, e);
-        }
-      }
-      else {
-        LOG.info("Comparator says " + created + " was created, but the new tree doesn't have this node");
+      catch (IOException e) {
+        LOG.info("IOException while decompressing " + created, e);
       }
       changesCount++;
     }
