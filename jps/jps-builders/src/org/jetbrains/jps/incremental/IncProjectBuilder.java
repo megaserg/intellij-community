@@ -15,6 +15,7 @@
  */
 package org.jetbrains.jps.incremental;
 
+import org.jetbrains.jps.incremental.storage.*;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.LowMemoryWatcher;
 import com.intellij.openapi.util.UserDataHolder;
@@ -51,13 +52,15 @@ import org.jetbrains.jps.cmdline.ProjectDescriptor;
 import org.jetbrains.jps.incremental.fs.BuildFSState;
 import org.jetbrains.jps.incremental.java.ExternalJavacDescriptor;
 import org.jetbrains.jps.incremental.messages.*;
-import org.jetbrains.jps.incremental.storage.BuildTargetConfiguration;
-import org.jetbrains.jps.incremental.storage.OneToManyPathsMapping;
-import org.jetbrains.jps.incremental.storage.OneToManyRelativePathsMapping;
+import org.jetbrains.jps.incremental.storage.outputroots.OutputDirectoryEventListener;
+import org.jetbrains.jps.incremental.storage.outputroots.OutputRootIndex;
+import org.jetbrains.jps.incremental.storage.outputroots.OutputRootToHashedFileTreeMapping;
+import org.jetbrains.jps.incremental.storage.outputroots.OutputRootToHashedFileTreeMappingLazyImpl;
 import org.jetbrains.jps.indices.ModuleExcludeIndex;
 import org.jetbrains.jps.model.java.JpsJavaExtensionService;
 import org.jetbrains.jps.model.java.compiler.JpsJavaCompilerConfiguration;
 import org.jetbrains.jps.model.module.JpsModule;
+import org.jetbrains.jps.model.serialization.JpsModelSerializationDataService;
 import org.jetbrains.jps.service.SharedThreadPool;
 import org.jetbrains.jps.util.JpsPathUtil;
 
@@ -330,6 +333,13 @@ public class IncProjectBuilder {
 
     context.addBuildListener(new ChainedTargetsBuildListener(context));
 
+    File projectBaseDir = JpsModelSerializationDataService.getBaseDirectory(context.getProjectDescriptor().getProject());
+    OutputRootIndex outputRootIndex = new OutputRootIndex(projectBaseDir, context, context.getProjectDescriptor().getBuildTargetIndex().getAllTargets());
+    File dataStorageRoot = context.getProjectDescriptor().dataManager.getDataPaths().getDataStorageRoot();
+    OutputRootToHashedFileTreeMapping
+      outputRootToTreeMapping = new OutputRootToHashedFileTreeMappingLazyImpl(outputRootIndex, projectBaseDir, dataStorageRoot);
+    context.addBuildListener(new OutputDirectoryEventListener(outputRootToTreeMapping));
+
     for (TargetBuilder builder : myBuilderRegistry.getTargetBuilders()) {
       builder.buildStarted(context);
     }
@@ -362,6 +372,8 @@ public class IncProjectBuilder {
         builder.buildFinished(context);
       }
       context.processMessage(new ProgressMessage("Finished, saving caches..."));
+
+      outputRootToTreeMapping.saveAll();
     }
 
   }

@@ -46,8 +46,6 @@ public class DirectoryCompressor {
     Deque<File> queue = new LinkedList<File>();
     queue.push(directory);
 
-    File base = directory;
-
     OutputStream out = new FileOutputStream(zipFilePath);
     ZipOutputStream zout = new ZipOutputStream(out);
     try {
@@ -56,17 +54,18 @@ public class DirectoryCompressor {
 
       while (!queue.isEmpty()) {
         File dir = queue.pop();
-        //File[] children = dir.listFiles();
-
-        for (File child : dir.listFiles()) {
-          if (child.isDirectory()) {
-            queue.push(child);
-          }
-          else {
-            String relativePath = FileUtil.toSystemIndependentName(FileUtil.getRelativePath(base, child));
-            zout.putNextEntry(new ZipEntry(relativePath));
-            copyFileToStream(child, zout);
-            zout.closeEntry();
+        File[] children = dir.listFiles();
+        if (children != null) {
+          for (File child : children) {
+            if (child.isDirectory()) {
+              queue.push(child);
+            }
+            else {
+              String relativePath = FileUtil.toSystemIndependentName(FileUtil.getRelativePath(directory, child));
+              zout.putNextEntry(new ZipEntry(relativePath));
+              copyFileToStream(child, zout);
+              zout.closeEntry();
+            }
           }
         }
       }
