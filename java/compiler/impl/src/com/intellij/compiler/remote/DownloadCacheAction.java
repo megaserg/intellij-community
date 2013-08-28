@@ -28,12 +28,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.incremental.storage.outputroots.OutputRootIndex;
 import org.jetbrains.jps.incremental.storage.treediff.ProjectHashUtil;
+import org.jetbrains.jps.incremental.storage.treediff.TreeDifferenceCollector;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.SocketException;
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.Scanner;
 
 /**
  * @author Sergey Serebryakov
@@ -41,11 +45,14 @@ import java.util.Scanner;
 public class DownloadCacheAction extends AbstractCacheAction {
   private static final Logger LOG = Logger.getInstance(DownloadCacheAction.class);
   private static final String TEMPORARY_ARCHIVE_DIRECTORY_PREFIX = "temp-zip-download";
-  private static final String EXISTING_CACHE_HASHTREE_PREFIX = "existing-cache";
-  private static final String EXISTING_OUTPUT_HASHTREE_PREFIX = "existing-output";
-  private static final String TEMPORARY_OUTPUTROOTS_HASHTREES_DIRECTORY_NAME = "existing-output-roots";
-  private static final int STEPS = 7;
+  private static final String CURRENT_CACHE_HASHTREE_PREFIX = "existing-cache";
+  private static final String CURRENT_OUTPUTROOTS_HASHTREES_DIRECTORY_NAME = "existing-output-roots";
+  private static final int STEPS = 9;
   private static final double STEP_FRACTION = 1.0 / STEPS;
+  private String myServerAddress;
+  private String myFtpUsername;
+  private String myFtpPassword;
+  private String myFtpInitialPath;
 
   private static void downloadFile(FTPClient ftp, String name, String localPath) {
     try {
@@ -62,22 +69,42 @@ public class DownloadCacheAction extends AbstractCacheAction {
     }
   }
 
-  private static boolean readContentList(String contentListPath, List<String> paths) {
-    Scanner in;
+  private boolean runDownloadSession(FTPClient ftp, Collection<DownloadTask> tasks) {
     try {
-      in = new Scanner(new File(contentListPath));
-      while (in.hasNextLine()) {
-        String path = in.nextLine();
-        if (!path.isEmpty()) {
-          paths.add(path);
+      try {
+        long startDownload = System.currentTimeMillis();
+
+        ftp.connect(myServerAddress);
+        if (!FTPReply.isPositiveCompletion(ftp.getReplyCode())) {
+          ftp.disconnect();
+          throw new SocketException("Reply code is bad");
         }
+        ftp.login(myFtpUsername, myFtpPassword);
+        ftp.setFileType(FTP.BINARY_FILE_TYPE);
+        //ftp.enterLocalPassiveMode();
+        ftp.changeWorkingDirectory(myFtpInitialPath);
+        ftp.changeWorkingDirectory(myRemoteDirectoryName);
+
+        for (DownloadTask task : tasks) {
+          downloadFile(ftp, task.getFileName(), task.getDestinationPath());
+        }
+
+        long finishDownload = System.currentTimeMillis();
+        logTimeConsumed("Downloading files via FTP: ", startDownload, finishDownload);
+      }
+      catch (SocketException e) {
+        LOG.info(e);
+        return false;
+      }
+      finally {
+        ftp.logout();
+        ftp.disconnect();
       }
     }
-    catch (FileNotFoundException e) {
+    catch (IOException e) {
       LOG.info(e);
       return false;
     }
-
     return true;
   }
 
@@ -91,22 +118,6 @@ public class DownloadCacheAction extends AbstractCacheAction {
         downloadAndDecompress(project, indicator);
       }
     }.queue();
-  }
-
-  private boolean compareAndUpdate(String oldStorageFilesPrefix,
-                                   String newStorageFilesPrefix,
-                                   String zipFilePath,
-                                   File actualDirectoryFile) {
-    if (ProjectHashUtil
-      .compareAndUpdate(myTempDirectory, oldStorageFilesPrefix, myTempDirectory, newStorageFilesPrefix, zipFilePath,
-                        actualDirectoryFile)) {
-      LOG.info("Updated successfully: " + actualDirectoryFile);
-      return true;
-    }
-    else {
-      LOG.info("Error while updating " + actualDirectoryFile);
-      return false;
-    }
   }
 
   private void downloadAndDecompress(@Nullable Project project, ProgressIndicator indicator) {
@@ -125,81 +136,50 @@ public class DownloadCacheAction extends AbstractCacheAction {
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     final RemoteCacheStorageSettings settings = RemoteCacheStorageSettings.getInstance();
-    String serverAddress = settings.getServerAddress();
-    String ftpUsername = settings.getFTPUsername();
-    String ftpPassword = settings.getFTPPassword();
-    String ftpInitialPath = settings.getFTPPath();
+    myServerAddress = settings.getServerAddress();
+    myFtpUsername = settings.getFTPUsername();
+    myFtpPassword = settings.getFTPPassword();
+    myFtpInitialPath = settings.getFTPPath();
 
-    List<String> outputRootZipNames = new LinkedList<String>();
-
-    indicator.setText("Downloading files");
     FTPClient ftp = new FTPClient();
-    try {
-      try {
-        long startDownload = System.currentTimeMillis();
 
-        ftp.connect(serverAddress);
-        if (!FTPReply.isPositiveCompletion(ftp.getReplyCode())) {
-          ftp.disconnect();
-          throw new SocketException("Reply code is bad");
-        }
-        ftp.login(ftpUsername, ftpPassword);
-        ftp.setFileType(FTP.BINARY_FILE_TYPE);
-        //ftp.enterLocalPassiveMode();
-        ftp.changeWorkingDirectory(ftpInitialPath);
-        ftp.changeWorkingDirectory(myRemoteDirectoryName);
+    List<DownloadTask> cacheDownloadTasks = new ArrayList<DownloadTask>();
+    cacheDownloadTasks.add(new DownloadTask(CACHE_ZIP_NAME, myLocalCacheZipPath));
+    cacheDownloadTasks.add(new DownloadTask(CACHE_HASHES_FILE_NAME, myLocalCacheHashesPath));
+    cacheDownloadTasks.add(new DownloadTask(CACHE_TREE_FILE_NAME, myLocalCacheTreePath));
 
-        downloadFile(ftp, CONTENT_LIST_FILENAME, myLocalContentListPath);
-        downloadFile(ftp, CACHE_ZIP_NAME, myLocalCacheZipPath);
-        downloadFile(ftp, CACHE_HASHES_FILE_NAME, myLocalCacheHashesPath);
-        downloadFile(ftp, CACHE_TREE_FILE_NAME, myLocalCacheTreePath);
-
-        if (!readContentList(myLocalContentListPath, outputRootZipNames)) {
-          return;
-        }
-
-        for (String fileName : outputRootZipNames) {
-          String localPath = new File(myTempDirectory, fileName).getAbsolutePath();
-          downloadFile(ftp, fileName, localPath);
-        }
-
-        long finishDownload = System.currentTimeMillis();
-        logTimeConsumed("Downloading files via FTP: ", startDownload, finishDownload);
-      }
-      catch (SocketException e) {
-        LOG.info(e);
-        return;
-      }
-      finally {
-        ftp.logout();
-        ftp.disconnect();
-      }
-    }
-    catch (IOException e) {
-      LOG.info(e);
+    indicator.setText("Downloading cache");
+    if (!runDownloadSession(ftp, cacheDownloadTasks)) {
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
-    // copy output roots hashtrees
     indicator.setText("Copying existing output roots hashtrees");
-    File temporaryOutputRootsHashtreesDirectory = new File(myTempDirectory, TEMPORARY_OUTPUTROOTS_HASHTREES_DIRECTORY_NAME);
+    File currentOutputRootsHashtreesDirectory = new File(myTempDirectory, CURRENT_OUTPUTROOTS_HASHTREES_DIRECTORY_NAME);
     try {
-      FileUtil.copyDir(myOutputRootsHashtreesDirectory, temporaryOutputRootsHashtreesDirectory);
+      if (myOutputRootsHashtreesDirectory.exists()) {
+        FileUtil.copyDir(myOutputRootsHashtreesDirectory, currentOutputRootsHashtreesDirectory);
+      }
+      else {
+        FileUtil.createDirectory(currentOutputRootsHashtreesDirectory);
+      }
     }
     catch (IOException e) {
       LOG.info("IOException while copying output roots hashtrees", e);
+      return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     indicator.setText("Actualizing hashtree for cache");
-    if (!actualize(myCacheDirectory, EXISTING_CACHE_HASHTREE_PREFIX)) {
+    if (!actualize(myCacheDirectory, CURRENT_CACHE_HASHTREE_PREFIX)) {
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     indicator.setText("Applying changes to cache");
-    if (!compareAndUpdate(EXISTING_CACHE_HASHTREE_PREFIX, CACHE_HASHTREE_PREFIX, myLocalCacheZipPath, myCacheDirectory)) {
+    if (!ProjectHashUtil
+      .compareAndUpdate(myTempDirectory, CURRENT_CACHE_HASHTREE_PREFIX, myTempDirectory, CACHE_HASHTREE_PREFIX, myLocalCacheZipPath,
+                        myCacheDirectory)) {
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
@@ -211,31 +191,40 @@ public class DownloadCacheAction extends AbstractCacheAction {
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
-    indicator.setText("Applying changes to output");
+    List<DownloadTask> outputRootsDownloadTasks = new ArrayList<DownloadTask>();
+    List<DiffHolder> diffHolders = new ArrayList<DiffHolder>();
+
+    indicator.setText("Computing differences for output roots");
     for (File outputRoot : outputRootIndex.getOutputRoots()) {
       String relativeOutputRoot = FileUtil.getRelativePath(myProjectBaseDir, outputRoot);
       String prefix = OutputRootIndex.getFilenameByOutputRoot(relativeOutputRoot);
       String outputRootZipName = prefix + ZIP_EXTENSION;
       String localOutputRootZipPath = new File(myTempDirectory, outputRootZipName).getAbsolutePath();
-      if (!ProjectHashUtil.compareAndUpdate(temporaryOutputRootsHashtreesDirectory, prefix,
-                                            myOutputRootsHashtreesDirectory, prefix,
-                                            localOutputRootZipPath, outputRoot)) {
+
+      TreeDifferenceCollector diff = new TreeDifferenceCollector();
+      if (!ProjectHashUtil.compare(currentOutputRootsHashtreesDirectory, prefix, myOutputRootsHashtreesDirectory, prefix, diff)) {
         return;
+      }
+      if (!diff.isEmpty()) {
+        outputRootsDownloadTasks.add(new DownloadTask(outputRootZipName, localOutputRootZipPath));
+        diffHolders.add(new DiffHolder(localOutputRootZipPath, outputRoot, diff));
       }
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
-    /*indicator.setText("Actualizing hashtree for output");
-    if (!actualize(myOutputDirectory, EXISTING_OUTPUT_HASHTREE_PREFIX)) {
+    indicator.setText("Downloading output roots");
+    if (!runDownloadSession(ftp, outputRootsDownloadTasks)) {
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
-    indicator.setText("Applying changes to output");
-    if (!compareAndUpdate(EXISTING_OUTPUT_HASHTREE_PREFIX, OUTPUT_HASHTREE_PREFIX, myLocalOutputZipPath, myOutputDirectory)) {
-      return;
+    indicator.setText("Applying changes to output roots");
+    for (DiffHolder holder : diffHolders) {
+      if (!ProjectHashUtil.apply(holder.getLocalOutputRootZipPath(), holder.getOutputRoot(), holder.getDiff())) {
+        return;
+      }
     }
-    indicator.setFraction(indicator.getFraction() + STEP_FRACTION);*/
+    indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     long finishWhole = System.currentTimeMillis();
     logTimeConsumed("Operation completed. Total time: ", startWhole, finishWhole);
@@ -243,5 +232,47 @@ public class DownloadCacheAction extends AbstractCacheAction {
     indicator.setFraction(1.0);
 
     // TODO(serebryakov): Cleanup temp directory (in finally block?)
+  }
+
+  private static class DownloadTask {
+    private String myFileName;
+    private String myDestinationPath;
+
+    private DownloadTask(String fileName, String destinationPath) {
+      myFileName = fileName;
+      myDestinationPath = destinationPath;
+    }
+
+    private String getFileName() {
+      return myFileName;
+    }
+
+    private String getDestinationPath() {
+      return myDestinationPath;
+    }
+  }
+
+  private static class DiffHolder {
+    private String myLocalOutputRootZipPath;
+    private File myOutputRoot;
+    private TreeDifferenceCollector myDiff;
+
+    private DiffHolder(String localOutputRootZipPath, File outputRoot, TreeDifferenceCollector diff) {
+      myLocalOutputRootZipPath = localOutputRootZipPath;
+      myOutputRoot = outputRoot;
+      myDiff = diff;
+    }
+
+    private String getLocalOutputRootZipPath() {
+      return myLocalOutputRootZipPath;
+    }
+
+    private File getOutputRoot() {
+      return myOutputRoot;
+    }
+
+    private TreeDifferenceCollector getDiff() {
+      return myDiff;
+    }
   }
 }

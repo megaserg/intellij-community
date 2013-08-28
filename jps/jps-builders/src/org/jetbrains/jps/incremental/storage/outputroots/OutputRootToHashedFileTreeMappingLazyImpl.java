@@ -15,6 +15,7 @@
  */
 package org.jetbrains.jps.incremental.storage.outputroots;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.io.FileUtil;
 import gnu.trove.THashMap;
 import org.jetbrains.jps.incremental.storage.treediff.ProjectHashedFileTree;
@@ -31,8 +32,11 @@ import java.util.Map;
  * @author Sergey Serebryakov
  */
 public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashedFileTreeMapping {
-  private static final String OUTPUTROOTS_STORAGE_DIR = "output-roots";
-  private static final String OUTPUTROOTS_LIST_FILENAME = "roots.list";
+  private static final Logger LOG = Logger.getInstance(OutputRootToHashedFileTreeMappingLazyImpl.class);
+
+  private static final String OUTPUT_ROOTS_STORAGE_DIR = "output-roots";
+  private static final String OUTPUT_ROOTS_LIST_FILENAME = "roots.list";
+
   private final OutputRootIndex myOutputRootIndex;
   private final File myProjectBaseDir;
   private final File myStorageDir;
@@ -42,11 +46,13 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
   public OutputRootToHashedFileTreeMappingLazyImpl(OutputRootIndex outputRootIndex, File projectBaseDir, File dataStorageRoot) {
     myOutputRootIndex = outputRootIndex;
     myProjectBaseDir = projectBaseDir;
-    myStorageDir = new File(dataStorageRoot, OUTPUTROOTS_STORAGE_DIR);
+    myStorageDir = new File(dataStorageRoot, OUTPUT_ROOTS_STORAGE_DIR);
     myMap = new THashMap<File, ProjectHashedFileTree>(FileUtil.FILE_HASHING_STRATEGY);
     myTreeActualizer = new TreeActualizer();
 
-    myStorageDir.mkdirs();
+    if (!myStorageDir.mkdirs()) {
+      LOG.info("Error while preparing storage directory");
+    }
   }
 
   private void update(File file, ActualizationStrategy strategy) {
@@ -62,10 +68,10 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
           tree.load();
         }
         catch (FileNotFoundException ignored) {
-          System.err.println("Hashtree storage file is missing and will be created at saving");
+          LOG.info("Hashtree storage file is missing and will be created at saving");
         }
         catch (IOException e) {
-          e.printStackTrace();
+          LOG.info("IOException while loading hashtree", e);
         }
 
         myMap.put(outputRoot, tree);
@@ -76,7 +82,7 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
         strategy.actualize(outputRoot, tree, relativePath);
       }
       catch (IOException e) {
-        e.printStackTrace();
+        LOG.info("IOException while actualizing hashtree", e);
       }
     }
   }
@@ -104,11 +110,10 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
   @Override
   public void saveAll() {
     try {
-      myOutputRootIndex.saveToFile(new File(myStorageDir, OUTPUTROOTS_LIST_FILENAME));
+      myOutputRootIndex.saveToFile(new File(myStorageDir, OUTPUT_ROOTS_LIST_FILENAME));
     }
     catch (IOException e) {
-      System.err.println("IOException while saving list of output roots");
-      e.printStackTrace();
+      LOG.info("IOException while saving list of output roots", e);
     }
 
     for (ProjectHashedFileTree tree : myMap.values()) {
@@ -116,14 +121,13 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
         tree.save();
       }
       catch (IOException e) {
-        System.err.println("IOException while saving hashtree for output root");
-        e.printStackTrace();
+        LOG.info("IOException while saving hashtree for output root", e);
       }
     }
     myMap.clear();
   }
 
-  private abstract class ActualizationStrategy {
+  private abstract static class ActualizationStrategy {
     public abstract void actualize(File projectRoot, ProjectHashedFileTree tree, String path) throws IOException;
   }
 }

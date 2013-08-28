@@ -22,34 +22,22 @@ public abstract class AbstractCacheAction extends AnAction {
   protected static final String CACHE_HASHTREE_PREFIX = "cache";
   protected static final String CACHE_HASHES_FILE_NAME = ProjectHashedFileTree.getHashesFileName(CACHE_HASHTREE_PREFIX);
   protected static final String CACHE_TREE_FILE_NAME = ProjectHashedFileTree.getTreeFileName(CACHE_HASHTREE_PREFIX);
-  //protected static final String OUTPUTROOTS_ZIP_NAME = "output-roots.zip";
+
   protected static final String OUTPUTROOTS_HASHTREES_DIRECTORY_NAME = "output-roots";
+  protected static final String OUTPUTROOTS_LIST_FILENAME = "roots.list";
   protected static final String ZIP_EXTENSION = ".zip";
 
-  /*protected static final String OUTPUT_ZIP_NAME = "output.zip";
-  protected static final String OUTPUT_HASHTREE_PREFIX = "output";
-  protected static final String OUTPUT_HASHES_FILE_NAME = ProjectHashedFileTree.getHashesFileName(OUTPUT_HASHTREE_PREFIX);
-  protected static final String OUTPUT_TREE_FILE_NAME = ProjectHashedFileTree.getTreeFileName(OUTPUT_HASHTREE_PREFIX);*/
-  protected static final String OUTPUTROOTS_LIST_FILENAME = "roots.list";
-
-  protected static final String CONTENT_LIST_FILENAME = "content.list";
-
   private static final Logger LOG = Logger.getInstance(AbstractCacheAction.class);
+
   protected String myRemoteDirectoryName;
   protected File myProjectBaseDir;
   protected File myCacheDirectory;
-  //protected File myOutputDirectory;
   protected File myTempDirectory;
 
-  protected String myLocalContentListPath;
   protected String myLocalCacheZipPath;
   protected String myLocalCacheHashesPath;
   protected String myLocalCacheTreePath;
 
-  /*protected String myLocalOutputZipPath;
-  protected String myLocalOutputHashesPath;
-  protected String myLocalOutputTreePath;*/
-  //protected String myLocalOutputRootsZipPath;
   protected File myOutputRootsHashtreesDirectory;
   protected File myOutputRootsListFile;
 
@@ -73,8 +61,6 @@ public abstract class AbstractCacheAction extends AnAction {
       return false;
     }
 
-    //myOutputDirectory = new File(VirtualFileManager.extractPath(extension.getCompilerOutputUrl()));
-
     myTempDirectory = null;
     try {
       myTempDirectory = FileUtil.createTempDirectory(tempArchiveDirectoryPrefix + "-" + myRemoteDirectoryName + "-", null);
@@ -84,17 +70,10 @@ public abstract class AbstractCacheAction extends AnAction {
       return false;
     }
 
-    myLocalContentListPath = new File(myTempDirectory, CONTENT_LIST_FILENAME).getAbsolutePath();
-
     myLocalCacheZipPath = new File(myTempDirectory, CACHE_ZIP_NAME).getAbsolutePath();
     myLocalCacheHashesPath = new File(myTempDirectory, CACHE_HASHES_FILE_NAME).getAbsolutePath();
     myLocalCacheTreePath = new File(myTempDirectory, CACHE_TREE_FILE_NAME).getAbsolutePath();
 
-    /*myLocalOutputZipPath = new File(myTempDirectory, OUTPUT_ZIP_NAME).getAbsolutePath();
-    myLocalOutputHashesPath = new File(myTempDirectory, OUTPUT_HASHES_FILE_NAME).getAbsolutePath();
-    myLocalOutputTreePath = new File(myTempDirectory, OUTPUT_TREE_FILE_NAME).getAbsolutePath();*/
-
-    //myLocalOutputRootsZipPath = new File(myTempDirectory, OUTPUTROOTS_ZIP_NAME).getAbsolutePath();
     myOutputRootsHashtreesDirectory = new File(myCacheDirectory, OUTPUTROOTS_HASHTREES_DIRECTORY_NAME);
     myOutputRootsListFile = new File(myOutputRootsHashtreesDirectory, OUTPUTROOTS_LIST_FILENAME);
 

@@ -27,9 +27,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.incremental.storage.outputroots.OutputRootIndex;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -54,26 +52,6 @@ public class UploadCacheAction extends AbstractCacheAction {
     }
     long finishCompress = System.currentTimeMillis();
     logTimeConsumed("Compressing " + displayName + ": ", startCompress, finishCompress);
-    return true;
-  }
-
-  private static boolean writeContentList(String contentListPath, List<String> paths) {
-    PrintWriter out = null;
-    try {
-      out = new PrintWriter(contentListPath);
-      try {
-        for (String path : paths) {
-          out.println(new File(path).getName());
-        }
-      }
-      finally {
-        out.close();
-      }
-    }
-    catch (FileNotFoundException e) {
-      LOG.info("IOException while creating content list", e);
-      return false;
-    }
     return true;
   }
 
@@ -110,18 +88,11 @@ public class UploadCacheAction extends AbstractCacheAction {
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
-
     indicator.setText("Actualizing hashtree for cache");
     if (!actualize(myCacheDirectory, CACHE_HASHTREE_PREFIX)) {
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
-
-    /*indicator.setText("Compressing output");
-    if (!compress(myLocalOutputZipPath, myOutputDirectory, OUTPUT_ZIP_NAME)) {
-      return;
-    }
-    indicator.setFraction(indicator.getFraction() + STEP_FRACTION);*/
 
     indicator.setText("Reading output roots index");
     OutputRootIndex outputRootIndex = readOutputRootIndex();
@@ -144,22 +115,9 @@ public class UploadCacheAction extends AbstractCacheAction {
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
-    indicator.setText("Creating content list");
-    if (!writeContentList(myLocalContentListPath, filesToUpload)) {
-      return;
-    }
-    indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
-
-    filesToUpload.add(myLocalContentListPath);
     filesToUpload.add(myLocalCacheZipPath);
     filesToUpload.add(myLocalCacheHashesPath);
     filesToUpload.add(myLocalCacheTreePath);
-
-    /*indicator.setText("Actualizing hashtree for output");
-    if (!actualize(myOutputDirectory, OUTPUT_HASHTREE_PREFIX)) {
-      return;
-    }
-    indicator.setFraction(indicator.getFraction() + STEP_FRACTION);*/
 
     final RemoteCacheStorageSettings settings = RemoteCacheStorageSettings.getInstance();
     String serverAddress = settings.getServerAddress();
@@ -193,10 +151,6 @@ public class UploadCacheAction extends AbstractCacheAction {
         String fileName = new File(localPath).getName();
         sftpChannel.put(localPath, fileName);
       }
-
-      /*sftpChannel.put(myLocalOutputZipPath, OUTPUT_ZIP_NAME);
-      sftpChannel.put(myLocalOutputHashesPath, OUTPUT_HASHES_FILE_NAME);
-      sftpChannel.put(myLocalOutputTreePath, OUTPUT_TREE_FILE_NAME);*/
 
       sftpChannel.exit();
       session.disconnect();
