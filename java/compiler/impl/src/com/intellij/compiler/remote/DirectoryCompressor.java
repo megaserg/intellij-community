@@ -16,6 +16,8 @@
 package com.intellij.compiler.remote;
 
 import com.intellij.openapi.util.io.FileUtil;
+import org.apache.tools.tar.TarEntry;
+import org.apache.tools.tar.TarOutputStream;
 
 import java.io.*;
 import java.util.Deque;
@@ -31,18 +33,19 @@ public class DirectoryCompressor {
 
   private static void copyFileToStream(File file, OutputStream out) throws IOException {
     InputStream in = new FileInputStream(file);
+    BufferedInputStream bin = new BufferedInputStream(in);
     try {
       int length;
-      while ((length = in.read(buffer)) > 0) {
+      while ((length = bin.read(buffer)) != -1) {
         out.write(buffer, 0, length);
       }
     }
     finally {
-      in.close();
+      bin.close();
     }
   }
 
-  public static void compressDirectory(String zipFilePath, File directory) throws IOException {
+  public static void compressDirectoryZip(String zipFilePath, File directory) throws IOException {
     Deque<File> queue = new LinkedList<File>();
     queue.push(directory);
 
@@ -72,6 +75,41 @@ public class DirectoryCompressor {
     }
     finally {
       zout.close();
+    }
+  }
+
+  public static void compressDirectoryTar(String tarFilePath, File directory) throws IOException {
+    Deque<File> queue = new LinkedList<File>();
+    queue.push(directory);
+
+    OutputStream out = new FileOutputStream(tarFilePath);
+    BufferedOutputStream bout = new BufferedOutputStream(out);
+    TarOutputStream tout = new TarOutputStream(bout);
+    try {
+      tout.setLongFileMode(TarOutputStream.LONGFILE_GNU);
+
+      while (!queue.isEmpty()) {
+        File dir = queue.pop();
+        File[] children = dir.listFiles();
+        if (children != null) {
+          for (File child : children) {
+            if (child.isDirectory()) {
+              queue.push(child);
+            }
+            else {
+              String relativePath = FileUtil.toSystemIndependentName(FileUtil.getRelativePath(directory, child));
+              TarEntry entry = new TarEntry(child);
+              entry.setName(relativePath);
+              tout.putNextEntry(entry);
+              copyFileToStream(child, tout);
+              tout.closeEntry();
+            }
+          }
+        }
+      }
+    }
+    finally {
+      tout.close();
     }
   }
 }

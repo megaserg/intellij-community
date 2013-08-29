@@ -44,7 +44,7 @@ import java.util.List;
  */
 public class DownloadCacheAction extends AbstractCacheAction {
   private static final Logger LOG = Logger.getInstance(DownloadCacheAction.class);
-  private static final String TEMPORARY_ARCHIVE_DIRECTORY_PREFIX = "temp-zip-download";
+  private static final String TEMPORARY_ARCHIVE_DIRECTORY_PREFIX = "temp-archive-download";
   private static final String CURRENT_CACHE_HASHTREE_PREFIX = "existing-cache";
   private static final String CURRENT_OUTPUTROOTS_HASHTREES_DIRECTORY_NAME = "existing-output-roots";
   private static final int STEPS = 9;
@@ -144,7 +144,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
     FTPClient ftp = new FTPClient();
 
     List<DownloadTask> cacheDownloadTasks = new ArrayList<DownloadTask>();
-    cacheDownloadTasks.add(new DownloadTask(CACHE_ZIP_NAME, myLocalCacheZipPath));
+    cacheDownloadTasks.add(new DownloadTask(CACHE_ARCHIVE_FILE_NAME, myLocalCacheArchivePath));
     cacheDownloadTasks.add(new DownloadTask(CACHE_HASHES_FILE_NAME, myLocalCacheHashesPath));
     cacheDownloadTasks.add(new DownloadTask(CACHE_TREE_FILE_NAME, myLocalCacheTreePath));
 
@@ -176,11 +176,24 @@ public class DownloadCacheAction extends AbstractCacheAction {
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
-    indicator.setText("Applying changes to cache");
-    if (!ProjectHashUtil
-      .compareAndUpdate(myTempDirectory, CURRENT_CACHE_HASHTREE_PREFIX, myTempDirectory, CACHE_HASHTREE_PREFIX, myLocalCacheZipPath,
-                        myCacheDirectory)) {
+    indicator.setText("Computing differences for cache");
+    long startCompareCache = System.currentTimeMillis();
+    TreeDifferenceCollector cacheDiff = new TreeDifferenceCollector();
+    if (!ProjectHashUtil.compare(myTempDirectory, CURRENT_CACHE_HASHTREE_PREFIX, myTempDirectory, CACHE_FILE_NAME_PREFIX, cacheDiff)) {
       return;
+    }
+    long finishCompareCache = System.currentTimeMillis();
+    logTimeConsumed("Computing differences for cache: ", (finishCompareCache - startCompareCache));
+    indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
+
+    if (!cacheDiff.isEmpty()) {
+      indicator.setText("Applying changes to cache");
+      long startApplyCache = System.currentTimeMillis();
+      if (!DirectoryDecompressor.decompress(myLocalCacheArchivePath, myCacheDirectory, cacheDiff)) {
+        return;
+      }
+      long finishApplyCache = System.currentTimeMillis();
+      logTimeConsumed("Applying changes to cache: ", (finishApplyCache - startApplyCache));
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
@@ -195,47 +208,46 @@ public class DownloadCacheAction extends AbstractCacheAction {
     List<DiffHolder> diffHolders = new ArrayList<DiffHolder>();
 
     indicator.setText("Computing differences for output roots");
-    long startCompare = System.currentTimeMillis();
+    long startCompareOutput = System.currentTimeMillis();
     for (File outputRoot : outputRootIndex.getOutputRoots()) {
       String relativeOutputRoot = FileUtil.getRelativePath(myProjectBaseDir, outputRoot);
       String prefix = OutputRootIndex.getFilenameByOutputRoot(relativeOutputRoot);
-      String outputRootZipName = prefix + ZIP_EXTENSION;
-      String localOutputRootZipPath = new File(myTempDirectory, outputRootZipName).getAbsolutePath();
+      String outputRootArchiveName = prefix + ARCHIVE_EXTENSION;
+      String localOutputRootArchivePath = new File(myTempDirectory, outputRootArchiveName).getAbsolutePath();
 
-      TreeDifferenceCollector diff = new TreeDifferenceCollector();
-      if (!ProjectHashUtil.compare(currentOutputRootsHashtreesDirectory, prefix, myOutputRootsHashtreesDirectory, prefix, diff)) {
+      TreeDifferenceCollector outputDiff = new TreeDifferenceCollector();
+      if (!ProjectHashUtil.compare(currentOutputRootsHashtreesDirectory, prefix, myOutputRootsHashtreesDirectory, prefix, outputDiff)) {
         return;
       }
-      if (!diff.isEmpty()) {
-        outputRootsDownloadTasks.add(new DownloadTask(outputRootZipName, localOutputRootZipPath));
-        diffHolders.add(new DiffHolder(localOutputRootZipPath, outputRoot, diff));
+      if (!outputDiff.isEmpty()) {
+        outputRootsDownloadTasks.add(new DownloadTask(outputRootArchiveName, localOutputRootArchivePath));
+        diffHolders.add(new DiffHolder(localOutputRootArchivePath, outputRoot, outputDiff));
       }
     }
-    long finishCompare = System.currentTimeMillis();
-    logTimeConsumed("Computing differences for output roots: ", (finishCompare - startCompare));
+    long finishCompareOutput = System.currentTimeMillis();
+    logTimeConsumed("Computing differences for output roots: ", (finishCompareOutput - startCompareOutput));
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     if (!outputRootsDownloadTasks.isEmpty()) {
       indicator.setText("Downloading output roots");
-
       if (!runDownloadSession(ftp, outputRootsDownloadTasks)) {
         return;
       }
-      indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
     }
+    indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     if (!diffHolders.isEmpty()) {
       indicator.setText("Applying changes to output roots");
-      long startApply = System.currentTimeMillis();
+      long startApplyOutput = System.currentTimeMillis();
       for (DiffHolder holder : diffHolders) {
-        if (!ProjectHashUtil.apply(holder.getLocalOutputRootZipPath(), holder.getOutputRoot(), holder.getDiff())) {
+        if (!DirectoryDecompressor.decompress(holder.getLocalOutputRootArchivePath(), holder.getOutputRoot(), holder.getDiff())) {
           return;
         }
       }
-      long finishApply = System.currentTimeMillis();
-      logTimeConsumed("Applying changes: ", (finishApply - startApply));
-      indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
+      long finishApplyOutput = System.currentTimeMillis();
+      logTimeConsumed("Applying changes to output roots: ", (finishApplyOutput - startApplyOutput));
     }
+    indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     long finishWhole = System.currentTimeMillis();
     logTimeConsumed("Operation completed. Total time: ", (finishWhole - startWhole));
@@ -264,18 +276,18 @@ public class DownloadCacheAction extends AbstractCacheAction {
   }
 
   private static class DiffHolder {
-    private String myLocalOutputRootZipPath;
+    private String myLocalOutputRootArchivePath;
     private File myOutputRoot;
     private TreeDifferenceCollector myDiff;
 
-    private DiffHolder(String localOutputRootZipPath, File outputRoot, TreeDifferenceCollector diff) {
-      myLocalOutputRootZipPath = localOutputRootZipPath;
+    private DiffHolder(String localOutputRootArchivePath, File outputRoot, TreeDifferenceCollector diff) {
+      myLocalOutputRootArchivePath = localOutputRootArchivePath;
       myOutputRoot = outputRoot;
       myDiff = diff;
     }
 
-    private String getLocalOutputRootZipPath() {
-      return myLocalOutputRootZipPath;
+    private String getLocalOutputRootArchivePath() {
+      return myLocalOutputRootArchivePath;
     }
 
     private File getOutputRoot() {

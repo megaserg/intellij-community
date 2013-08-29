@@ -18,14 +18,15 @@ import java.io.IOException;
  * @author Sergey Serebryakov
  */
 public abstract class AbstractCacheAction extends AnAction {
-  protected static final String CACHE_ZIP_NAME = "cache.zip";
-  protected static final String CACHE_HASHTREE_PREFIX = "cache";
-  protected static final String CACHE_HASHES_FILE_NAME = ProjectHashedFileTree.getHashesFileName(CACHE_HASHTREE_PREFIX);
-  protected static final String CACHE_TREE_FILE_NAME = ProjectHashedFileTree.getTreeFileName(CACHE_HASHTREE_PREFIX);
+  protected static final String ARCHIVE_EXTENSION = ".tar";
+
+  protected static final String CACHE_FILE_NAME_PREFIX = "cache";
+  protected static final String CACHE_ARCHIVE_FILE_NAME = CACHE_FILE_NAME_PREFIX + ARCHIVE_EXTENSION;
+  protected static final String CACHE_HASHES_FILE_NAME = ProjectHashedFileTree.getHashesFileName(CACHE_FILE_NAME_PREFIX);
+  protected static final String CACHE_TREE_FILE_NAME = ProjectHashedFileTree.getTreeFileName(CACHE_FILE_NAME_PREFIX);
 
   protected static final String OUTPUTROOTS_HASHTREES_DIRECTORY_NAME = "output-roots";
   protected static final String OUTPUTROOTS_LIST_FILENAME = "roots.list";
-  protected static final String ZIP_EXTENSION = ".zip";
 
   private static final Logger LOG = Logger.getInstance(AbstractCacheAction.class);
 
@@ -34,7 +35,7 @@ public abstract class AbstractCacheAction extends AnAction {
   protected File myCacheDirectory;
   protected File myTempDirectory;
 
-  protected String myLocalCacheZipPath;
+  protected String myLocalCacheArchivePath;
   protected String myLocalCacheHashesPath;
   protected String myLocalCacheTreePath;
 
@@ -70,7 +71,7 @@ public abstract class AbstractCacheAction extends AnAction {
       return false;
     }
 
-    myLocalCacheZipPath = new File(myTempDirectory, CACHE_ZIP_NAME).getAbsolutePath();
+    myLocalCacheArchivePath = new File(myTempDirectory, CACHE_ARCHIVE_FILE_NAME).getAbsolutePath();
     myLocalCacheHashesPath = new File(myTempDirectory, CACHE_HASHES_FILE_NAME).getAbsolutePath();
     myLocalCacheTreePath = new File(myTempDirectory, CACHE_TREE_FILE_NAME).getAbsolutePath();
 

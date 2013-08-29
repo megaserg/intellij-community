@@ -173,7 +173,7 @@ public class TreeActualizer {
 
     // We chop off the first directory name (prefix up to the first slash) from pathToUpdate and append it to currentPath to get nextPath.
     int slashPosition = pathToUpdate.indexOf("/");
-    String nextName = null;
+    String nextName;
     if (slashPosition == -1) {
       nextName = pathToUpdate;
       pathToUpdate = "";

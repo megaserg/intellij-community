@@ -79,7 +79,7 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
       String relativePath = FileUtil.getRelativePath(outputRoot, file);
 
       try {
-        strategy.actualize(outputRoot, tree, relativePath);
+        strategy.actualizeSinglePath(outputRoot, tree, relativePath);
       }
       catch (IOException e) {
         LOG.error("IOException while actualizing hashtree", e);
@@ -91,7 +91,7 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
   public void registerGeneratedFile(File file) {
     update(file, new ActualizationStrategy() {
       @Override
-      public void actualize(File projectRoot, ProjectHashedFileTree tree, String path) throws IOException {
+      public void actualizeSinglePath(File projectRoot, ProjectHashedFileTree tree, String path) throws IOException {
         myTreeActualizer.actualizeWhenSingleFileGenerated(projectRoot, tree, path);
       }
     });
@@ -101,7 +101,7 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
   public void registerDeletedFile(File file) {
     update(file, new ActualizationStrategy() {
       @Override
-      public void actualize(File projectRoot, ProjectHashedFileTree tree, String path) throws IOException {
+      public void actualizeSinglePath(File projectRoot, ProjectHashedFileTree tree, String path) throws IOException {
         myTreeActualizer.actualizeWhenSingleFileDeleted(projectRoot, tree, path);
       }
     });
@@ -128,6 +128,6 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
   }
 
   private abstract static class ActualizationStrategy {
-    public abstract void actualize(File projectRoot, ProjectHashedFileTree tree, String path) throws IOException;
+    public abstract void actualizeSinglePath(File projectRoot, ProjectHashedFileTree tree, String path) throws IOException;
   }
 }

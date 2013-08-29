@@ -36,14 +36,14 @@ import java.util.List;
  */
 public class UploadCacheAction extends AbstractCacheAction {
   private static final Logger LOG = Logger.getInstance(UploadCacheAction.class);
-  private static final String TEMPORARY_ARCHIVE_DIRECTORY_PREFIX = "temp-zip-upload";
+  private static final String TEMPORARY_ARCHIVE_DIRECTORY_PREFIX = "temp-archive-upload";
   private static final int SFTP_CONNECTION_PORT = 22;
   private static final int STEPS = 6;
   private static final double STEP_FRACTION = 1.0 / STEPS;
 
-  private static boolean compress(String localZipPath, File directoryToCompress, String displayName) {
+  private static boolean compress(String localArchivePath, File directoryToCompress, String displayName) {
     try {
-      DirectoryCompressor.compressDirectory(localZipPath, directoryToCompress);
+      DirectoryCompressor.compressDirectoryTar(localArchivePath, directoryToCompress);
     }
     catch (IOException e) {
       LOG.error("IOException while compressing " + directoryToCompress, e);
@@ -81,7 +81,7 @@ public class UploadCacheAction extends AbstractCacheAction {
 
     indicator.setText("Compressing cache");
     long startCompressCache = System.currentTimeMillis();
-    if (!compress(myLocalCacheZipPath, myCacheDirectory, CACHE_ZIP_NAME)) {
+    if (!compress(myLocalCacheArchivePath, myCacheDirectory, CACHE_ARCHIVE_FILE_NAME)) {
       return;
     }
     long finishCompressCache = System.currentTimeMillis();
@@ -89,7 +89,7 @@ public class UploadCacheAction extends AbstractCacheAction {
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     indicator.setText("Actualizing hashtree for cache");
-    if (!actualize(myCacheDirectory, CACHE_HASHTREE_PREFIX)) {
+    if (!actualize(myCacheDirectory, CACHE_FILE_NAME_PREFIX)) {
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
@@ -107,18 +107,18 @@ public class UploadCacheAction extends AbstractCacheAction {
     for (File outputRoot : outputRootIndex.getOutputRoots()) {
       String relativeOutputRoot = FileUtil.getRelativePath(myProjectBaseDir, outputRoot);
       String prefix = OutputRootIndex.getFilenameByOutputRoot(relativeOutputRoot);
-      String outputRootZipName = prefix + ZIP_EXTENSION;
-      String localOutputRootZipPath = new File(myTempDirectory, outputRootZipName).getPath();
-      if (!compress(localOutputRootZipPath, outputRoot, outputRoot.getPath())) {
+      String outputRootArchiveName = prefix + ARCHIVE_EXTENSION;
+      String localOutputRootArchivePath = new File(myTempDirectory, outputRootArchiveName).getPath();
+      if (!compress(localOutputRootArchivePath, outputRoot, outputRoot.getPath())) {
         return;
       }
-      filesToUpload.add(localOutputRootZipPath);
+      filesToUpload.add(localOutputRootArchivePath);
     }
     long finishCompressOutput = System.currentTimeMillis();
     logTimeConsumed("Compressing output roots: ", (finishCompressOutput - startCompressOutput));
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
-    filesToUpload.add(myLocalCacheZipPath);
+    filesToUpload.add(myLocalCacheArchivePath);
     filesToUpload.add(myLocalCacheHashesPath);
     filesToUpload.add(myLocalCacheTreePath);
 

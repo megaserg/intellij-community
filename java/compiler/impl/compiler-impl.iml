@@ -29,6 +29,7 @@
     <orderEntry type="module" module-name="java-analysis-impl" />
     <orderEntry type="library" name="commons-net" level="project" />
     <orderEntry type="library" name="JSch" level="project" />
+    <orderEntry type="library" name="Ant" level="project" />
   </component>
   <component name="copyright">
     <Base>
