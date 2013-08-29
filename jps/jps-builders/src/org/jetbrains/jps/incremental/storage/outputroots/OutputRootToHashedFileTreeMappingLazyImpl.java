@@ -51,7 +51,7 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
     myTreeActualizer = new TreeActualizer();
 
     if (!myStorageDir.mkdirs()) {
-      LOG.info("Error while preparing storage directory");
+      LOG.error("Error while preparing storage directory");
     }
   }
 
@@ -68,10 +68,10 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
           tree.load();
         }
         catch (FileNotFoundException ignored) {
-          LOG.info("Hashtree storage file is missing and will be created at saving");
+          LOG.info("Hashtree storage file is missing and will be created at saving (" + prefix + " in " + myStorageDir + ")");
         }
         catch (IOException e) {
-          LOG.info("IOException while loading hashtree", e);
+          LOG.error("IOException while loading hashtree", e);
         }
 
         myMap.put(outputRoot, tree);
@@ -82,7 +82,7 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
         strategy.actualize(outputRoot, tree, relativePath);
       }
       catch (IOException e) {
-        LOG.info("IOException while actualizing hashtree", e);
+        LOG.error("IOException while actualizing hashtree", e);
       }
     }
   }
@@ -113,7 +113,7 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
       myOutputRootIndex.saveToFile(new File(myStorageDir, OUTPUT_ROOTS_LIST_FILENAME));
     }
     catch (IOException e) {
-      LOG.info("IOException while saving list of output roots", e);
+      LOG.error("IOException while saving list of output roots", e);
     }
 
     for (ProjectHashedFileTree tree : myMap.values()) {
@@ -121,7 +121,7 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
         tree.save();
       }
       catch (IOException e) {
-        LOG.info("IOException while saving hashtree for output root", e);
+        LOG.error("IOException while saving hashtree for output root", e);
       }
     }
     myMap.clear();

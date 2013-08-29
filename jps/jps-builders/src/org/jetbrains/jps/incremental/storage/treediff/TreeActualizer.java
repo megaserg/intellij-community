@@ -187,7 +187,7 @@ public class TreeActualizer {
     if (!file.exists()) {
       return;
     }
-    
+
     if (file.isDirectory()) {
       if (!tree.hasDirectory(currentPath)) {
         if (tree.hasFile(currentPath)) {

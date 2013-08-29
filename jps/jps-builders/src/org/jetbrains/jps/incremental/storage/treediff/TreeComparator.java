@@ -1,5 +1,6 @@
 package org.jetbrains.jps.incremental.storage.treediff;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.text.StringUtil;
 
 import java.util.Collection;
@@ -9,6 +10,8 @@ import java.util.Iterator;
  * @author Sergey Serebryakov
  */
 public class TreeComparator {
+  private static final Logger LOG = Logger.getInstance(TreeComparator.class);
+
   private static <T> T safeNext(Iterator<T> i) {
     return i.hasNext() ? i.next() : null;
   }
@@ -27,7 +30,7 @@ public class TreeComparator {
 
     if (!myHash.equals(yourHash)) {
       if (Debug.DEBUG) {
-        System.err.println("Different hashes: " + path);
+        LOG.debug("Different hashes: " + path);
       }
       if (myTree.hasFile(path) && yourTree.hasFile(path)) {
         collector.addChangedFile(path);

@@ -41,13 +41,13 @@ public abstract class AbstractCacheAction extends AnAction {
   protected File myOutputRootsHashtreesDirectory;
   protected File myOutputRootsListFile;
 
-  protected static void logTimeConsumed(String comment, long start, long finish) {
-    LOG.info(comment + (finish - start) / 1000.0 + " sec");
+  protected static void logTimeConsumed(String comment, long ms) {
+    LOG.info(comment + ms / 1000.0 + " sec");
   }
 
   protected boolean initDirectoryVariables(@Nullable Project project, String tempArchiveDirectoryPrefix) {
     if (project == null) {
-      LOG.info("Error: project is null");
+      LOG.error("Error: project is null");
       return false;
     }
 
@@ -57,7 +57,7 @@ public abstract class AbstractCacheAction extends AnAction {
 
     CompilerProjectExtension extension = CompilerProjectExtension.getInstance(project);
     if (extension == null) {
-      LOG.info("Error: CompilerProjectExtension is null");
+      LOG.error("Error: CompilerProjectExtension is null");
       return false;
     }
 
@@ -66,7 +66,7 @@ public abstract class AbstractCacheAction extends AnAction {
       myTempDirectory = FileUtil.createTempDirectory(tempArchiveDirectoryPrefix + "-" + myRemoteDirectoryName + "-", null);
     }
     catch (IOException e) {
-      LOG.info("Error while creating temporary archive directory", e);
+      LOG.error("IOException while creating temporary archive directory", e);
       return false;
     }
 
@@ -86,7 +86,7 @@ public abstract class AbstractCacheAction extends AnAction {
       return true;
     }
     else {
-      LOG.info("Error while actualizing " + actualDirectoryFile);
+      LOG.error("Error while actualizing " + actualDirectoryFile);
       return false;
     }
   }
@@ -97,7 +97,7 @@ public abstract class AbstractCacheAction extends AnAction {
       outputRootIndex = new OutputRootIndex(myOutputRootsListFile, myProjectBaseDir);
     }
     catch (IOException e) {
-      LOG.info("IOException while reading output roots index", e);
+      LOG.error("IOException while reading output roots index", e);
       return null;
     }
     return outputRootIndex;

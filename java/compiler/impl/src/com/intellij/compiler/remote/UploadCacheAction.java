@@ -38,20 +38,17 @@ public class UploadCacheAction extends AbstractCacheAction {
   private static final Logger LOG = Logger.getInstance(UploadCacheAction.class);
   private static final String TEMPORARY_ARCHIVE_DIRECTORY_PREFIX = "temp-zip-upload";
   private static final int SFTP_CONNECTION_PORT = 22;
-  private static final int STEPS = 7;
+  private static final int STEPS = 6;
   private static final double STEP_FRACTION = 1.0 / STEPS;
 
   private static boolean compress(String localZipPath, File directoryToCompress, String displayName) {
-    long startCompress = System.currentTimeMillis();
     try {
       DirectoryCompressor.compressDirectory(localZipPath, directoryToCompress);
     }
     catch (IOException e) {
-      LOG.info("Error while compressing " + directoryToCompress, e);
+      LOG.error("IOException while compressing " + directoryToCompress, e);
       return false;
     }
-    long finishCompress = System.currentTimeMillis();
-    logTimeConsumed("Compressing " + displayName + ": ", startCompress, finishCompress);
     return true;
   }
 
@@ -77,15 +74,18 @@ public class UploadCacheAction extends AbstractCacheAction {
       LOG.info("Directories initialized successfully");
     }
     else {
-      LOG.info("Error while initializing directories");
+      LOG.error("Error while initializing directories");
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     indicator.setText("Compressing cache");
+    long startCompressCache = System.currentTimeMillis();
     if (!compress(myLocalCacheZipPath, myCacheDirectory, CACHE_ZIP_NAME)) {
       return;
     }
+    long finishCompressCache = System.currentTimeMillis();
+    logTimeConsumed("Compressing cache: ", (finishCompressCache - startCompressCache));
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     indicator.setText("Actualizing hashtree for cache");
@@ -102,6 +102,7 @@ public class UploadCacheAction extends AbstractCacheAction {
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     indicator.setText("Compressing output roots");
+    long startCompressOutput = System.currentTimeMillis();
     List<String> filesToUpload = new LinkedList<String>();
     for (File outputRoot : outputRootIndex.getOutputRoots()) {
       String relativeOutputRoot = FileUtil.getRelativePath(myProjectBaseDir, outputRoot);
@@ -113,6 +114,8 @@ public class UploadCacheAction extends AbstractCacheAction {
       }
       filesToUpload.add(localOutputRootZipPath);
     }
+    long finishCompressOutput = System.currentTimeMillis();
+    logTimeConsumed("Compressing output roots: ", (finishCompressOutput - startCompressOutput));
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     filesToUpload.add(myLocalCacheZipPath);
@@ -156,20 +159,20 @@ public class UploadCacheAction extends AbstractCacheAction {
       session.disconnect();
 
       long finishUpload = System.currentTimeMillis();
-      logTimeConsumed("Uploading files via SFTP: ", startUpload, finishUpload);
+      logTimeConsumed("Uploading files via SFTP: ", (finishUpload - startUpload));
     }
     catch (JSchException e) {
-      LOG.info(e);
+      LOG.error(e);
       return;
     }
     catch (SftpException e) {
-      LOG.info(e);
+      LOG.error(e);
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     long finishWhole = System.currentTimeMillis();
-    logTimeConsumed("Operation completed. Total time: ", startWhole, finishWhole);
+    logTimeConsumed("Operation completed. Total time: ", (finishWhole - startWhole));
 
     indicator.setFraction(1.0);
 

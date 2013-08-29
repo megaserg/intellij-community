@@ -83,7 +83,7 @@ public abstract class SynchronizedHashMapStorage<Key, Value> {
       }
     }
     catch (ClassNotFoundException e) {
-      System.err.println("No HashMap? Really?");
+      throw new RuntimeException("No HashMap? Really?");
     }
     finally {
       in.close();

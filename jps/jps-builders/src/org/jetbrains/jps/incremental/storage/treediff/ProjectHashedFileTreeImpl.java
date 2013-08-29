@@ -1,5 +1,6 @@
 package org.jetbrains.jps.incremental.storage.treediff;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.io.FileUtil;
 import org.jetbrains.jps.incremental.storage.treediff.mapstorage.PathToChildrenMapping;
 import org.jetbrains.jps.incremental.storage.treediff.mapstorage.PathToHashMapping;
@@ -22,10 +23,14 @@ import java.util.TreeSet;
 // - Reuse the same MessageDigest instance (as a singleton) - NB: always reset
 
 public class ProjectHashedFileTreeImpl extends ProjectHashedFileTree {
+  private static final Logger LOG = Logger.getInstance(ProjectHashedFileTreeImpl.class);
+
   private static final String ROOT_DIRECTORY = ".";
   private static final String INITIAL_DIRECTORY_HASH = "initial_directory_hash";
+
   private int nodesCount = 0;
   private int directoriesCount = 0;
+
   //private Map<String, String> hashes = new HashMap<String, String>(); // maps (path) to (hash)
   //private Map<String, SortedSet<String>> tree = new HashMap<String, SortedSet<String>>(); // maps (directory path) to (sorted set of children names)
   private PathToHashMapping hashes;
@@ -59,14 +64,14 @@ public class ProjectHashedFileTreeImpl extends ProjectHashedFileTree {
 
   private Collection<String> getChildrenSet(String dirPath) {
     if (Debug.DEBUG && !hasDirectory(dirPath)) {
-      throw new RuntimeException("Cannot get children of a non-existent directory " + dirPath);
+      LOG.error("Cannot get children of a non-existent directory " + dirPath);
     }
     return tree.get(dirPath);
   }
 
   private String getParent(String path) {
     if (Debug.DEBUG && !hasNode(path)) {
-      throw new RuntimeException("Cannot get parent of a non-existent path " + path);
+      LOG.error("Cannot get parent of a non-existent path " + path);
     }
     //return nodes.get(path);
     return FileUtil.toSystemIndependentName(new File(path).getParent());
@@ -74,7 +79,7 @@ public class ProjectHashedFileTreeImpl extends ProjectHashedFileTree {
 
   private void addChild(String parent, String child) {
     if (Debug.DEBUG && !hasDirectory(parent)) {
-      throw new RuntimeException("Cannot add child to a non-existent directory " + parent);
+      LOG.error("Cannot add child to a non-existent directory " + parent);
     }
     //tree.appendChild(parent, child);
     tree.get(parent).add(child);
@@ -82,7 +87,7 @@ public class ProjectHashedFileTreeImpl extends ProjectHashedFileTree {
 
   private void removeChild(String parent, String child) {
     if (Debug.DEBUG && !hasDirectory(parent)) {
-      throw new RuntimeException("Cannot remove child from a non-existent directory " + parent);
+      LOG.error("Cannot remove child from a non-existent directory " + parent);
     }
     //tree.removeChild(parent, child);
     tree.get(parent).remove(child);
@@ -110,7 +115,7 @@ public class ProjectHashedFileTreeImpl extends ProjectHashedFileTree {
 
   private void addNode(String path, String parentPath, String hash) {
     if (Debug.DEBUG && hasNode(path)) {
-      throw new RuntimeException("The path " + path + " is already present in the tree");
+      LOG.error("The path " + path + " is already present in the tree");
     }
     String name = getNameByPath(path);
     addChild(parentPath, name);
@@ -121,7 +126,7 @@ public class ProjectHashedFileTreeImpl extends ProjectHashedFileTree {
 
   private void removeNode(String path) {
     if (Debug.DEBUG && !hasNode(path)) {
-      throw new RuntimeException("Cannot remove non-existent path " + path);
+      LOG.error("Cannot remove non-existent path " + path);
     }
     String parent = getParent(path);
     String name = getNameByPath(path);
@@ -196,11 +201,11 @@ public class ProjectHashedFileTreeImpl extends ProjectHashedFileTree {
   public String getHash(String path) {
     path = FileUtil.toSystemIndependentName(path);
     if (Debug.DEBUG && !hasNode(path)) {
-      throw new RuntimeException("Cannot get hash for non-existent path " + path);
+      LOG.error("Cannot get hash for non-existent path " + path);
     }
     String hash = hashes.get(path);
     if (Debug.DEBUG && hash.equals(INITIAL_DIRECTORY_HASH)) {
-      throw new RuntimeException("Cannot get uninitialized hash for directory " + path);
+      LOG.error("Cannot get uninitialized hash for directory " + path);
     }
     return hash;
   }
@@ -209,7 +214,7 @@ public class ProjectHashedFileTreeImpl extends ProjectHashedFileTree {
   public void updateHash(String path, String hash) {
     path = FileUtil.toSystemIndependentName(path);
     if (Debug.DEBUG && !hasNode(path)) {
-      throw new RuntimeException("Cannot update hash for non-existent path " + path);
+      LOG.error("Cannot update hash for non-existent path " + path);
     }
     //System.err.println("Updated hash for path " + path + " (" + hash + ")");
     hashes.put(path, hash);

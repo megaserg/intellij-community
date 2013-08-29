@@ -65,7 +65,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
       }
     }
     catch (IOException e) {
-      LOG.info("Error while downloading file", e);
+      LOG.error("IOException while downloading file", e);
     }
   }
 
@@ -90,10 +90,10 @@ public class DownloadCacheAction extends AbstractCacheAction {
         }
 
         long finishDownload = System.currentTimeMillis();
-        logTimeConsumed("Downloading files via FTP: ", startDownload, finishDownload);
+        logTimeConsumed("Downloading files via FTP: ", (finishDownload - startDownload));
       }
       catch (SocketException e) {
-        LOG.info(e);
+        LOG.error("SocketException while downloading files", e);
         return false;
       }
       finally {
@@ -102,7 +102,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
       }
     }
     catch (IOException e) {
-      LOG.info(e);
+      LOG.error("IOException while downloading files", e);
       return false;
     }
     return true;
@@ -130,7 +130,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
       LOG.info("Directories initialized successfully");
     }
     else {
-      LOG.info("Error while initializing directories");
+      LOG.error("Error while initializing directories");
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
@@ -165,7 +165,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
       }
     }
     catch (IOException e) {
-      LOG.info("IOException while copying output roots hashtrees", e);
+      LOG.error("IOException while copying output roots hashtrees", e);
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
@@ -195,6 +195,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
     List<DiffHolder> diffHolders = new ArrayList<DiffHolder>();
 
     indicator.setText("Computing differences for output roots");
+    long startCompare = System.currentTimeMillis();
     for (File outputRoot : outputRootIndex.getOutputRoots()) {
       String relativeOutputRoot = FileUtil.getRelativePath(myProjectBaseDir, outputRoot);
       String prefix = OutputRootIndex.getFilenameByOutputRoot(relativeOutputRoot);
@@ -210,24 +211,34 @@ public class DownloadCacheAction extends AbstractCacheAction {
         diffHolders.add(new DiffHolder(localOutputRootZipPath, outputRoot, diff));
       }
     }
+    long finishCompare = System.currentTimeMillis();
+    logTimeConsumed("Computing differences for output roots: ", (finishCompare - startCompare));
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
-    indicator.setText("Downloading output roots");
-    if (!runDownloadSession(ftp, outputRootsDownloadTasks)) {
-      return;
-    }
-    indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
+    if (!outputRootsDownloadTasks.isEmpty()) {
+      indicator.setText("Downloading output roots");
 
-    indicator.setText("Applying changes to output roots");
-    for (DiffHolder holder : diffHolders) {
-      if (!ProjectHashUtil.apply(holder.getLocalOutputRootZipPath(), holder.getOutputRoot(), holder.getDiff())) {
+      if (!runDownloadSession(ftp, outputRootsDownloadTasks)) {
         return;
       }
+      indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
     }
-    indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
+
+    if (!diffHolders.isEmpty()) {
+      indicator.setText("Applying changes to output roots");
+      long startApply = System.currentTimeMillis();
+      for (DiffHolder holder : diffHolders) {
+        if (!ProjectHashUtil.apply(holder.getLocalOutputRootZipPath(), holder.getOutputRoot(), holder.getDiff())) {
+          return;
+        }
+      }
+      long finishApply = System.currentTimeMillis();
+      logTimeConsumed("Applying changes: ", (finishApply - startApply));
+      indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
+    }
 
     long finishWhole = System.currentTimeMillis();
-    logTimeConsumed("Operation completed. Total time: ", startWhole, finishWhole);
+    logTimeConsumed("Operation completed. Total time: ", (finishWhole - startWhole));
 
     indicator.setFraction(1.0);
 

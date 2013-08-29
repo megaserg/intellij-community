@@ -68,10 +68,6 @@ public class OutputRootIndex {
     return "outputroot_" + relativeOutputRootPath.hashCode();
   }
 
-  /*public static String getFilenameByOutputRoot(File relativeOutputRoot) {
-    return getFilenameByOutputRoot(relativeOutputRoot.getPath());
-  }*/
-
   public Collection<File> getOutputRootsByOutputFile(@NotNull File file) {
     File current = file;
     List<File> result = new ArrayList<File>();
