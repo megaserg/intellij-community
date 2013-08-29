@@ -1,12 +1,10 @@
 package org.jetbrains.jps.incremental.storage.treediff;
 
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.util.io.FileUtil;
-import org.apache.tools.tar.*;
 
-import java.io.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 /**
  * @author Sergey Serebryakov
@@ -96,10 +94,10 @@ public class ProjectHashUtil {
   }*/
 
   public static boolean compare(File oldStorageDirectoryFile,
-                                 String oldStorageFilesPrefix,
-                                 File newStorageDirectoryFile,
-                                 String newStorageFilesPrefix,
-                                 TreeDifferenceCollector diff) {
+                                String oldStorageFilesPrefix,
+                                File newStorageDirectoryFile,
+                                String newStorageFilesPrefix,
+                                TreeDifferenceCollector diff) {
     if (!oldStorageDirectoryFile.exists() || !oldStorageDirectoryFile.isDirectory()) {
       LOG.error("Missing storage directory: " + oldStorageDirectoryFile);
       return false;
@@ -117,8 +115,11 @@ public class ProjectHashUtil {
       oldTree.load();
     }
     catch (FileNotFoundException ignored) {
-      LOG.debug(
-        "Hashtree storage file is missing and will be created at saving (" + oldStorageFilesPrefix + " in " + oldStorageDirectoryFile + ")");
+      LOG.debug("Hashtree storage file is missing and will be created at saving (" +
+                oldStorageFilesPrefix +
+                " in " +
+                oldStorageDirectoryFile +
+                ")");
     }
     catch (IOException e) {
       LOG.error("IOException while loading a hashtree", e);
@@ -129,8 +130,11 @@ public class ProjectHashUtil {
       newTree.load();
     }
     catch (FileNotFoundException ignored) {
-      LOG.debug(
-        "Hashtree storage file is missing and will be created at saving (" + newStorageFilesPrefix + " in " + newStorageDirectoryFile + ")");
+      LOG.debug("Hashtree storage file is missing and will be created at saving (" +
+                newStorageFilesPrefix +
+                " in " +
+                newStorageDirectoryFile +
+                ")");
     }
     catch (IOException e) {
       LOG.error("IOException while loading a hashtree", e);
