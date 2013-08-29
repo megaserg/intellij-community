@@ -208,15 +208,19 @@ public class TreeActualizer {
   }
 
   public void actualizeWhenSingleFileGenerated(File projectRoot, ProjectHashedFileTree tree, String pathToUpdate) throws IOException {
-    pathToUpdate = FileUtil.toSystemIndependentName(FileUtil.toCanonicalPath(pathToUpdate));
+    pathToUpdate = FileUtil.toCanonicalPath(FileUtil.toSystemIndependentName(pathToUpdate));
     actualizeSinglePath(projectRoot, tree, pathToUpdate, ".", ".");
   }
 
   public void actualizeWhenSingleFileDeleted(File projectRoot, ProjectHashedFileTree tree, String pathToDelete) throws IOException {
-    pathToDelete = FileUtil.toSystemIndependentName(FileUtil.toCanonicalPath(pathToDelete));
+    pathToDelete = FileUtil.toCanonicalPath(FileUtil.toSystemIndependentName(pathToDelete));
 
     // To register that a file has been deleted, we should just update the record for its parent directory.
-    String pathToUpdate = FileUtil.toSystemIndependentName(FileUtil.getParentFile(new File(pathToDelete)).getPath());
+    File parentFile = FileUtil.getParentFile(new File(pathToDelete));
+    String pathToUpdate = ""; // if parentFile is null, pathToUpdate must be empty to trigger actualization of the root directory.
+    if (parentFile != null) {
+      pathToUpdate = FileUtil.toSystemIndependentName(parentFile.getPath());
+    }
     actualizeSinglePath(projectRoot, tree, pathToUpdate, ".", ".");
   }
 }
