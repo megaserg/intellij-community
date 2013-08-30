@@ -50,7 +50,8 @@ public class OutputRootToHashedFileTreeMappingLazyImpl extends OutputRootToHashe
     myMap = new THashMap<File, ProjectHashedFileTree>(FileUtil.FILE_HASHING_STRATEGY);
     myTreeActualizer = new TreeActualizer();
 
-    if (!myStorageDir.mkdirs()) {
+    myStorageDir.mkdirs();
+    if (!myStorageDir.exists()) {
       LOG.error("Error while preparing storage directory");
     }
   }
