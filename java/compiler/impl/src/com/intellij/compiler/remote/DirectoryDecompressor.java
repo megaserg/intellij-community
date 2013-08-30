@@ -89,7 +89,7 @@ public class DirectoryDecompressor {
     for (String deleted : diff.getDeletedFiles()) {
       File deletedFile = new File(actualDirectoryFile, deleted);
       if (!deletedFile.exists()) {
-        LOG.error("Comparator says " + deleted + " was deleted, but there was no file initially");
+        LOG.warn("Comparator says " + deleted + " was deleted, but there was no file initially");
         continue;
       }
       if (!FileUtil.delete(deletedFile)) {
@@ -101,7 +101,7 @@ public class DirectoryDecompressor {
     for (String created : diff.getCreatedFiles()) {
       File createdFile = new File(actualDirectoryFile, created);
       if (createdFile.exists()) {
-        LOG.error("Comparator says " + created + " was created, but there was a file already");
+        LOG.warn("Comparator says " + created + " was created, but there was a file already");
         continue;
       }
 
@@ -115,7 +115,7 @@ public class DirectoryDecompressor {
     for (String changed : diff.getChangedFiles()) {
       File changedFile = new File(actualDirectoryFile, changed);
       if (!changedFile.exists()) {
-        LOG.error("Comparator says " + changed + " was changed, but there was no file initially");
+        LOG.warn("Comparator says " + changed + " was changed, but there was no file initially");
         continue;
       }
       if (!FileUtil.delete(changedFile)) {

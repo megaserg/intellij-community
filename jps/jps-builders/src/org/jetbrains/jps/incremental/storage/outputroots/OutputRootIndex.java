@@ -20,6 +20,8 @@ import gnu.trove.THashSet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jps.builders.BuildTarget;
 import org.jetbrains.jps.incremental.CompileContext;
+import org.jetbrains.jps.incremental.artifacts.ArtifactBuildTarget;
+import org.jetbrains.jps.incremental.artifacts.ArtifactBuildTargetType;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -43,7 +45,14 @@ public class OutputRootIndex {
 
     myOutputRoots = new THashSet<File>(FileUtil.FILE_HASHING_STRATEGY);
     for (BuildTarget<?> target : allTargets) {
-      myOutputRoots.addAll(target.getOutputRoots(context));
+      if (target.getTargetType().equals(ArtifactBuildTargetType.INSTANCE)) {
+        // getOutputRoots for artifact target returns artifact filename instead of directory, thus special handling is needed
+        ArtifactBuildTarget artifactTarget = (ArtifactBuildTarget) target;
+        myOutputRoots.add(new File(artifactTarget.getArtifact().getOutputPath()));
+      }
+      else {
+        myOutputRoots.addAll(target.getOutputRoots(context));
+      }
     }
   }
 

@@ -203,7 +203,7 @@ public class TreeActualizer {
     else {
       // If currentPath points to an existing file which isn't directory, the pathToUpdate is empty and we have caught this before.
       // Therefore, this branch is unreachable.
-      throw new RuntimeException("Reached unreachable branch");
+      throw new RuntimeException("Reached unreachable branch, file: " + file);
     }
   }
 

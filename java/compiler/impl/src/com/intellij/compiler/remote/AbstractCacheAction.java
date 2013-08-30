@@ -1,6 +1,9 @@
 package com.intellij.compiler.remote;
 
 import com.intellij.compiler.server.BuildManager;
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationType;
+import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -28,8 +31,9 @@ public abstract class AbstractCacheAction extends AnAction {
   protected static final String OUTPUTROOTS_HASHTREES_DIRECTORY_NAME = "output-roots";
   protected static final String OUTPUTROOTS_LIST_FILENAME = "roots.list";
 
-  private static final Logger LOG = Logger.getInstance(AbstractCacheAction.class);
+  protected static final String UPLOAD_DOWNLOAD_CACHE_OUTPUT_GROUP_ID = "Upload/Download Cache and Output";
 
+  protected Project myProject;
   protected String myRemoteDirectoryName;
   protected File myProjectBaseDir;
   protected File myCacheDirectory;
@@ -39,26 +43,48 @@ public abstract class AbstractCacheAction extends AnAction {
   protected String myLocalCacheHashesPath;
   protected String myLocalCacheTreePath;
 
-  protected File myOutputRootsHashtreesDirectory;
+  protected File myOutputRootHashtreesDirectory;
   protected File myOutputRootsListFile;
 
-  protected static void logTimeConsumed(String comment, long ms) {
-    LOG.info(comment + ms / 1000.0 + " sec");
+  protected abstract Logger getLogger();
+
+  protected abstract String getNotificationTitle();
+
+  protected void logTimeConsumed(String comment, long ms) {
+    getLogger().info(comment + ms / 1000.0 + " sec");
+  }
+
+  protected void logMessageToEventLog(String content, NotificationType type) {
+    Notifications.Bus.notify(new Notification(UPLOAD_DOWNLOAD_CACHE_OUTPUT_GROUP_ID, getNotificationTitle(), content, type));
+  }
+
+  protected void logErrorToEventLog(String content) {
+    logMessageToEventLog(content, NotificationType.ERROR);
+  }
+
+  protected void logInfoToEventLog(String content) {
+    logMessageToEventLog(content, NotificationType.INFORMATION);
+  }
+
+  protected void logError(String message) {
+    getLogger().error(message);
+    logErrorToEventLog(message);
   }
 
   protected boolean initDirectoryVariables(@Nullable Project project, String tempArchiveDirectoryPrefix) {
     if (project == null) {
-      LOG.error("Error: project is null");
+      getLogger().error("Error: project is null");
       return false;
     }
 
+    myProject = project;
     myRemoteDirectoryName = project.getName();
     myProjectBaseDir = new File(project.getBasePath());
     myCacheDirectory = BuildManager.getInstance().getProjectSystemDirectory(project);
 
     CompilerProjectExtension extension = CompilerProjectExtension.getInstance(project);
     if (extension == null) {
-      LOG.error("Error: CompilerProjectExtension is null");
+      getLogger().error("Error: CompilerProjectExtension is null");
       return false;
     }
 
@@ -67,7 +93,7 @@ public abstract class AbstractCacheAction extends AnAction {
       myTempDirectory = FileUtil.createTempDirectory(tempArchiveDirectoryPrefix + "-" + myRemoteDirectoryName + "-", null);
     }
     catch (IOException e) {
-      LOG.error("IOException while creating temporary archive directory", e);
+      getLogger().error("IOException while creating temporary archive directory", e);
       return false;
     }
 
@@ -75,19 +101,19 @@ public abstract class AbstractCacheAction extends AnAction {
     myLocalCacheHashesPath = new File(myTempDirectory, CACHE_HASHES_FILE_NAME).getAbsolutePath();
     myLocalCacheTreePath = new File(myTempDirectory, CACHE_TREE_FILE_NAME).getAbsolutePath();
 
-    myOutputRootsHashtreesDirectory = new File(myCacheDirectory, OUTPUTROOTS_HASHTREES_DIRECTORY_NAME);
-    myOutputRootsListFile = new File(myOutputRootsHashtreesDirectory, OUTPUTROOTS_LIST_FILENAME);
+    myOutputRootHashtreesDirectory = new File(myCacheDirectory, OUTPUTROOTS_HASHTREES_DIRECTORY_NAME);
+    myOutputRootsListFile = new File(myOutputRootHashtreesDirectory, OUTPUTROOTS_LIST_FILENAME);
 
     return true;
   }
 
   protected boolean actualize(File actualDirectoryFile, String storageFilesPrefix) {
     if (ProjectHashUtil.actualize(actualDirectoryFile, myTempDirectory, storageFilesPrefix)) {
-      LOG.info("Actualized successfully: " + actualDirectoryFile);
+      getLogger().info("Actualized successfully: " + actualDirectoryFile);
       return true;
     }
     else {
-      LOG.error("Error while actualizing " + actualDirectoryFile);
+      getLogger().error("Error while actualizing " + actualDirectoryFile);
       return false;
     }
   }
@@ -98,7 +124,7 @@ public abstract class AbstractCacheAction extends AnAction {
       outputRootIndex = new OutputRootIndex(myOutputRootsListFile, myProjectBaseDir);
     }
     catch (IOException e) {
-      LOG.error("IOException while reading output roots index", e);
+      getLogger().error("IOException while reading output roots index", e);
       return null;
     }
     return outputRootIndex;

@@ -15,8 +15,12 @@
  */
 package com.intellij.compiler.remote;
 
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationType;
+import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
@@ -46,13 +50,24 @@ public class DownloadCacheAction extends AbstractCacheAction {
   private static final Logger LOG = Logger.getInstance(DownloadCacheAction.class);
   private static final String TEMPORARY_ARCHIVE_DIRECTORY_PREFIX = "temp-archive-download";
   private static final String CURRENT_CACHE_HASHTREE_PREFIX = "existing-cache";
-  private static final String CURRENT_OUTPUTROOTS_HASHTREES_DIRECTORY_NAME = "existing-output-roots";
-  private static final int STEPS = 9;
+  private static final String CURRENT_OUTPUTROOT_HASHTREES_DIRECTORY_NAME = "existing-output-roots";
+  private static final String NOTIFICATION_TITLE = "Downloading remote cache/output";
+  private static final int STEPS = 10;
   private static final double STEP_FRACTION = 1.0 / STEPS;
   private String myServerAddress;
   private String myFtpUsername;
   private String myFtpPassword;
   private String myFtpInitialPath;
+
+  @Override
+  protected Logger getLogger() {
+    return LOG;
+  }
+
+  @Override
+  protected String getNotificationTitle() {
+    return NOTIFICATION_TITLE;
+  }
 
   private static void downloadFile(FTPClient ftp, String name, String localPath) {
     try {
@@ -108,9 +123,32 @@ public class DownloadCacheAction extends AbstractCacheAction {
     return true;
   }
 
+  private boolean copyExistingOutputRootHashtrees(File currentOutputRootHashtreesDirectory) {
+    try {
+      if (myOutputRootHashtreesDirectory.exists()) {
+        FileUtil.copyDir(myOutputRootHashtreesDirectory, currentOutputRootHashtreesDirectory);
+      }
+      else {
+        FileUtil.createDirectory(currentOutputRootHashtreesDirectory);
+      }
+    }
+    catch (IOException e) {
+      LOG.error("IOException while copying existing output roots hashtrees", e);
+      return false;
+    }
+    return true;
+  }
+
   @Override
   public void actionPerformed(AnActionEvent event) {
     final Project project = event.getProject();
+
+    final RemoteCacheStorageSettings settings = RemoteCacheStorageSettings.getInstance();
+    while (settings.getServerAddress().isEmpty() || settings.getFTPUsername().isEmpty() || settings.getFTPPath().isEmpty()) {
+      if (!ShowSettingsUtil.getInstance().editConfigurable(project, new RemoteCacheStorageConfigurable())) {
+        return;
+      }
+    }
 
     new Task.Backgroundable(project, "Downloading cache and output", true) {
       @Override
@@ -121,6 +159,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
   }
 
   private void downloadAndDecompress(@Nullable Project project, ProgressIndicator indicator) {
+
     indicator.setFraction(0.0);
 
     long startWhole = System.currentTimeMillis();
@@ -130,7 +169,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
       LOG.info("Directories initialized successfully");
     }
     else {
-      LOG.error("Error while initializing directories");
+      logError("Error while initializing directories");
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
@@ -150,28 +189,22 @@ public class DownloadCacheAction extends AbstractCacheAction {
 
     indicator.setText("Downloading cache");
     if (!runDownloadSession(ftp, cacheDownloadTasks)) {
+      logError("Error while downloading cache");
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     indicator.setText("Copying existing output roots hashtrees");
-    File currentOutputRootsHashtreesDirectory = new File(myTempDirectory, CURRENT_OUTPUTROOTS_HASHTREES_DIRECTORY_NAME);
-    try {
-      if (myOutputRootsHashtreesDirectory.exists()) {
-        FileUtil.copyDir(myOutputRootsHashtreesDirectory, currentOutputRootsHashtreesDirectory);
-      }
-      else {
-        FileUtil.createDirectory(currentOutputRootsHashtreesDirectory);
-      }
-    }
-    catch (IOException e) {
-      LOG.error("IOException while copying output roots hashtrees", e);
+    File currentOutputRootHashtreesDirectory = new File(myTempDirectory, CURRENT_OUTPUTROOT_HASHTREES_DIRECTORY_NAME);
+    if (!copyExistingOutputRootHashtrees(currentOutputRootHashtreesDirectory)) {
+      logError("Error while copying existing output roots hashtrees");
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     indicator.setText("Actualizing hashtree for cache");
     if (!actualize(myCacheDirectory, CURRENT_CACHE_HASHTREE_PREFIX)) {
+      logError("Error while actualizing hashtree for cache");
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
@@ -180,6 +213,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
     long startCompareCache = System.currentTimeMillis();
     TreeDifferenceCollector cacheDiff = new TreeDifferenceCollector();
     if (!ProjectHashUtil.compare(myTempDirectory, CURRENT_CACHE_HASHTREE_PREFIX, myTempDirectory, CACHE_FILE_NAME_PREFIX, cacheDiff)) {
+      logError("Error while computing differences for cache");
       return;
     }
     long finishCompareCache = System.currentTimeMillis();
@@ -190,6 +224,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
       indicator.setText("Applying changes to cache");
       long startApplyCache = System.currentTimeMillis();
       if (!DirectoryDecompressor.decompress(myLocalCacheArchivePath, myCacheDirectory, cacheDiff)) {
+        logError("Error while applying changes to cache");
         return;
       }
       long finishApplyCache = System.currentTimeMillis();
@@ -200,6 +235,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
     indicator.setText("Reading output roots index");
     OutputRootIndex outputRootIndex = readOutputRootIndex();
     if (outputRootIndex == null) {
+      logError("Error while reading output roots index");
       return;
     }
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
@@ -216,7 +252,8 @@ public class DownloadCacheAction extends AbstractCacheAction {
       String localOutputRootArchivePath = new File(myTempDirectory, outputRootArchiveName).getAbsolutePath();
 
       TreeDifferenceCollector outputDiff = new TreeDifferenceCollector();
-      if (!ProjectHashUtil.compare(currentOutputRootsHashtreesDirectory, prefix, myOutputRootsHashtreesDirectory, prefix, outputDiff)) {
+      if (!ProjectHashUtil.compare(currentOutputRootHashtreesDirectory, prefix, myOutputRootHashtreesDirectory, prefix, outputDiff)) {
+        logError("Error while computing differences for output roots");
         return;
       }
       if (!outputDiff.isEmpty()) {
@@ -231,6 +268,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
     if (!outputRootsDownloadTasks.isEmpty()) {
       indicator.setText("Downloading output roots");
       if (!runDownloadSession(ftp, outputRootsDownloadTasks)) {
+        logError("Error while downloading output roots");
         return;
       }
     }
@@ -241,6 +279,7 @@ public class DownloadCacheAction extends AbstractCacheAction {
       long startApplyOutput = System.currentTimeMillis();
       for (DiffHolder holder : diffHolders) {
         if (!DirectoryDecompressor.decompress(holder.getLocalOutputRootArchivePath(), holder.getOutputRoot(), holder.getDiff())) {
+          logError("Error while applying changes to output roots");
           return;
         }
       }
@@ -250,7 +289,8 @@ public class DownloadCacheAction extends AbstractCacheAction {
     indicator.setFraction(indicator.getFraction() + STEP_FRACTION);
 
     long finishWhole = System.currentTimeMillis();
-    logTimeConsumed("Operation completed. Total time: ", (finishWhole - startWhole));
+    logTimeConsumed("Downloading and updating completed. Total time: ", (finishWhole - startWhole));
+    logInfoToEventLog("Downloading and updating completed successfully in " + (finishWhole - startWhole) / 1000.0 + " sec");
 
     indicator.setFraction(1.0);
 

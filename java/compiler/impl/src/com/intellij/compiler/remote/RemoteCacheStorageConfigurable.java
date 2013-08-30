@@ -35,8 +35,8 @@ public class RemoteCacheStorageConfigurable implements SearchableConfigurable, C
   private final RemoteCacheStorageSettings mySettings;
   private RemoteCacheStoragePanel myPanel;
 
-  public RemoteCacheStorageConfigurable(RemoteCacheStorageSettings settings) {
-    mySettings = settings;
+  public RemoteCacheStorageConfigurable() {
+    mySettings = RemoteCacheStorageSettings.getInstance();
   }
 
   @NotNull
